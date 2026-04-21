@@ -1,9 +1,12 @@
 const BASE = (typeof __API_URL__ !== 'undefined' && __API_URL__) ? `${__API_URL__}/api` : '/api'
 
+let _demoMode = false
+export function setApiDemoMode(val) { _demoMode = !!val }
+
 async function req(method, path, body) {
   const opts = {
     method,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Demo-Mode': String(_demoMode) },
   }
   if (body !== undefined) opts.body = JSON.stringify(body)
   const res = await fetch(`${BASE}${path}`, opts)

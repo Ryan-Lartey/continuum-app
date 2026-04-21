@@ -4,7 +4,7 @@ import express from 'express'
 import cors from 'cors'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
-import pool from './db.js'
+import pool, { setDemoMode } from './db.js'
 import kpiRoutes from './routes/kpi.js'
 import obsRoutes from './routes/observations.js'
 import projectRoutes from './routes/projects.js'
@@ -30,6 +30,12 @@ const PORT = process.env.SERVER_PORT || 3001
 
 app.use(cors())
 app.use(express.json())
+
+// Set demo mode per-request from client header — survives server restarts
+app.use((req, res, next) => {
+  setDemoMode(req.headers['x-demo-mode'] === 'true')
+  next()
+})
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }))
 

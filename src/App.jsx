@@ -9,7 +9,7 @@ import PortfolioView from './views/PortfolioView.jsx'
 import DataView from './views/DataView.jsx'
 import ReportsView from './views/ReportsView.jsx'
 import ProcessMapsView from './views/ProcessMapsView.jsx'
-import { api } from './lib/api.js'
+import { api, setApiDemoMode } from './lib/api.js'
 import GlobalSearch from './components/GlobalSearch.jsx'
 
 export default function App() {
@@ -24,6 +24,10 @@ export default function App() {
   useEffect(() => {
     fetch('/api/demo/status').then(r => r.json()).then(d => setDemoMode(!!d.demoMode)).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    setApiDemoMode(demoMode)
+  }, [demoMode])
 
   useEffect(() => {
     api.getLatestKpis().then(kpis => {
