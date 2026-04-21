@@ -85,6 +85,14 @@ app.patch('/api/sync/config', async (req, res) => {
   }
 })
 
+// Serve built frontend in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(join(__dirname, '../dist')))
+  app.get('*', (req, res) => {
+    res.sendFile(join(__dirname, '../dist/index.html'))
+  })
+}
+
 app.listen(PORT, () => {
   console.log(`[Server] Continuum backend running on port ${PORT}`)
   startAutomation()
