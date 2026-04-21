@@ -1,4 +1,4 @@
-const BASE = '/api'
+const BASE = (typeof __API_URL__ !== 'undefined' && __API_URL__) ? `${__API_URL__}/api` : '/api'
 
 async function req(method, path, body) {
   const opts = {
