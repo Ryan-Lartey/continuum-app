@@ -19,15 +19,11 @@ export default function App() {
   const [openPortfolio, setOpenPortfolio] = useState(null)
   const [signals, setSignals] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
-  const [demoMode, setDemoMode] = useState(false)
-
-  useEffect(() => {
-    fetch('/api/demo/status').then(r => r.json()).then(d => setDemoMode(!!d.demoMode)).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    setApiDemoMode(demoMode)
-  }, [demoMode])
+  const [demoMode, setDemoMode] = useState(() => {
+    const saved = localStorage.getItem('continuum_demo_mode') === 'true'
+    setApiDemoMode(saved)
+    return saved
+  })
 
   useEffect(() => {
     api.getLatestKpis().then(kpis => {
@@ -46,16 +42,15 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  async function toggleDemoMode() {
-    const res = await fetch('/api/demo/toggle', { method: 'POST' }).then(r => r.json()).catch(() => null)
-    if (res) {
-      // Pre-populate demo headcount in localStorage so dashboard shows realistic data
-      if (res.demoMode) {
-        const today = new Date().toISOString().split('T')[0]
-        localStorage.setItem(`continuum_headcount_${today}`, JSON.stringify({ inbound: 48, outbound: 62, pick: 74 }))
-      }
-      window.location.reload()
+  function toggleDemoMode() {
+    const next = !demoMode
+    localStorage.setItem('continuum_demo_mode', String(next))
+    setApiDemoMode(next)
+    if (next) {
+      const today = new Date().toISOString().split('T')[0]
+      localStorage.setItem(`continuum_headcount_${today}`, JSON.stringify({ inbound: 48, outbound: 62, pick: 74 }))
     }
+    window.location.reload()
   }
 
   function handleOpenAgent(agentId, initialMessage) {
