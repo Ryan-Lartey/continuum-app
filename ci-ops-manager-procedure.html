@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CI Project Life Cycle - Ops Manager Procedure</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 11pt; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #111827; background: #fff; line-height: 1.6; }
+
+  :root {
+    --navy:   #0F172A;
+    --navy2:  #1E293B;
+    --orange: #F97316;
+    --slate:  #64748B;
+    --light:  #F8FAFC;
+    --border: #E2E8F0;
+    --gn-bg:  #DCFCE7; --gn-tx: #166534;
+    --am-bg:  #FEF9C3; --am-tx: #854D0E;
+    --rd-bg:  #FEE2E2; --rd-tx: #991B1B;
+    --bl-bg:  #EFF6FF; --bl-tx: #1D4ED8;
+  }
+
+  @page {
+    size: A4;
+    margin: 16mm 15mm 14mm 15mm;
+  }
+  @media print {
+    body { font-size: 10pt; }
+    .page-break { page-break-before: always; }
+    .no-break { page-break-inside: avoid; }
+    .cover { page-break-after: always; }
+  }
+  @media screen {
+    body { max-width: 860px; margin: 0 auto; padding: 24px; background: #f1f5f9; }
+    .page { background: #fff; margin-bottom: 28px; padding: 40px 48px; box-shadow: 0 4px 24px rgba(0,0,0,.10); border-radius: 4px; }
+  }
+  .page { padding: 0; }
+  @media screen { .page { padding: 40px 48px; } }
+
+  /* ── Cover ── */
+  .cover {
+    background: var(--navy);
+    color: #fff;
+    padding: 52px 52px 44px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 360px;
+  }
+  @media screen { .cover { border-radius: 4px; min-height: auto; } }
+  .cover-badge {
+    display: inline-block;
+    background: var(--orange);
+    color: #fff;
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 2px;
+    margin-bottom: 28px;
+  }
+  .cover h1 { font-size: 26pt; font-weight: 800; line-height: 1.15; color: #fff; margin-bottom: 10px; }
+  .cover h1 span { color: var(--orange); }
+  .cover .cover-sub { font-size: 11pt; color: #94A3B8; max-width: 500px; margin-bottom: 28px; }
+  .cover-divider { width: 48px; height: 3px; background: var(--orange); margin: 20px 0; border-radius: 2px; }
+  .cover-desc { font-size: 10pt; color: #94A3B8; max-width: 520px; line-height: 1.65; }
+  .cover-footer {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-top: 40px; padding-top: 20px; border-top: 1px solid #1E293B;
+  }
+  .cover-footer .meta { font-size: 8.5pt; color: #475569; }
+  .cover-footer .logo { font-size: 16pt; font-weight: 800; color: var(--orange); }
+  .cover-footer .logo span { color: #fff; }
+
+  /* ── Section header ── */
+  .sec-header {
+    background: var(--navy);
+    color: #fff;
+    padding: 14px 20px 11px;
+    margin-bottom: 22px;
+    border-left: 5px solid var(--orange);
+  }
+  .sec-header .sec-num { font-size: 7.5pt; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--orange); margin-bottom: 3px; }
+  .sec-header h2 { font-size: 15pt; font-weight: 800; color: #fff; line-height: 1.2; }
+  .sec-header .sec-sub { font-size: 9pt; color: #94A3B8; margin-top: 3px; }
+
+  /* ── Typography ── */
+  h3 { font-size: 11pt; font-weight: 700; color: var(--navy); margin: 18px 0 7px; padding-bottom: 3px; border-bottom: 2px solid var(--orange); display: inline-block; }
+  p  { margin-bottom: 9px; color: #374151; font-size: 10.5pt; }
+  ul, ol { margin: 6px 0 10px 18px; color: #374151; font-size: 10.5pt; }
+  li { margin-bottom: 4px; line-height: 1.5; }
+  strong { color: var(--navy); }
+
+  /* ── Flow steps ── */
+  .flow {
+    display: flex; align-items: stretch; gap: 0;
+    margin: 16px 0; flex-wrap: nowrap; overflow-x: auto;
+  }
+  .flow-step {
+    flex: 1; min-width: 70px;
+    background: var(--navy); color: #fff;
+    text-align: center; padding: 11px 6px 9px;
+    position: relative; font-size: 8pt; font-weight: 700; line-height: 1.3;
+  }
+  .flow-step::after {
+    content: ''; position: absolute;
+    top: 50%; right: -12px; transform: translateY(-50%);
+    width: 0; height: 0;
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    border-left: 12px solid var(--navy);
+    z-index: 2;
+  }
+  .flow-step:last-child::after { display: none; }
+  .flow-step .sn { display: block; font-size: 6.5pt; font-weight: 400; color: #94A3B8; margin-bottom: 2px; letter-spacing: 1px; }
+  .col-orange { background: var(--orange); } .col-orange::after { border-left-color: var(--orange); }
+  .col-green  { background: #16a34a; }  .col-green::after  { border-left-color: #16a34a; }
+  .col-blue   { background: #1D4ED8; }  .col-blue::after   { border-left-color: #1D4ED8; }
+  .col-teal   { background: #0E7490; }  .col-teal::after   { border-left-color: #0E7490; }
+  .col-grey   { background: #374151; }  .col-grey::after   { border-left-color: #374151; }
+  .col-purple { background: #6D28D9; }  .col-purple::after { border-left-color: #6D28D9; }
+  .col-amber  { background: #B45309; }  .col-amber::after  { border-left-color: #B45309; }
+
+  /* ── Callouts ── */
+  .callout {
+    padding: 12px 16px; border-radius: 3px; margin: 12px 0;
+    border-left: 4px solid; font-size: 10pt;
+  }
+  .callout-blue  { background: var(--bl-bg); border-color: #1D4ED8; color: #1e3a8a; }
+  .callout-green { background: var(--gn-bg); border-color: #16a34a; color: #14532d; }
+  .callout-amber { background: var(--am-bg); border-color: #d97706; color: #78350f; }
+  .callout-navy  { background: var(--light);  border-color: var(--navy); color: var(--navy); }
+  .callout strong { color: inherit; }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 9.5pt; }
+  thead tr { background: var(--navy); color: #fff; }
+  thead th { padding: 8px 11px; text-align: left; font-size: 8pt; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  tbody tr:nth-child(even) { background: var(--light); }
+  tbody tr:nth-child(odd)  { background: #fff; }
+  tbody td { padding: 7px 11px; border-bottom: 1px solid var(--border); vertical-align: top; color: #374151; }
+  .td-label { font-weight: 700; color: var(--navy); white-space: nowrap; }
+
+  /* ── Step boxes ── */
+  .steps { margin: 14px 0; }
+  .step-row {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+  }
+  .step-row:last-child { border-bottom: none; }
+  .step-num-box {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--navy); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10pt; font-weight: 800; flex-shrink: 0; margin-top: 1px;
+  }
+  .step-content .step-title { font-size: 10.5pt; font-weight: 700; color: var(--navy); margin-bottom: 3px; }
+  .step-content p { margin-bottom: 0; font-size: 10pt; }
+
+  /* ── Role badge ── */
+  .role-badge {
+    display: inline-block; padding: 2px 9px; border-radius: 20px;
+    font-size: 8pt; font-weight: 700; margin-right: 4px; margin-bottom: 3px;
+    white-space: nowrap;
+  }
+  .rb-ci   { background: #FEF9C3; color: #854D0E; }
+  .rb-mgr  { background: #DBEAFE; color: #1D4ED8; }
+  .rb-tl   { background: #DCFCE7; color: #166534; }
+  .rb-all  { background: #F3E8FF; color: #6D28D9; }
+
+  /* ── Two col ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+
+  /* ── Info box ── */
+  .info-box {
+    background: var(--light); border: 1px solid var(--border);
+    border-left: 3px solid var(--navy); padding: 10px 14px; border-radius: 2px;
+  }
+  .info-box .ib-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--slate); margin-bottom: 3px; }
+  .info-box .ib-val   { font-size: 10pt; font-weight: 700; color: var(--navy); }
+
+  /* ── Footer bar ── */
+  .footer-bar {
+    margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .footer-bar .meta { font-size: 8pt; color: #94A3B8; }
+  .footer-bar .logo { font-size: 14pt; font-weight: 800; color: var(--orange); }
+  .footer-bar .logo span { color: var(--navy); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+  .mt12 { margin-top: 12px; }
+  .orange { color: var(--orange); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ COVER ══════════ -->
+<div class="page cover">
+  <div>
+    <div class="cover-badge">Ops Manager Reference &nbsp;·&nbsp; Confidential</div>
+    <h1>CI Project<br/><span>Life Cycle</span></h1>
+    <p class="cover-sub">From floor observation to closed improvement project. What happens, who does what, and when.</p>
+    <div class="cover-divider"></div>
+    <p class="cover-desc">
+      This document explains how the Continuous Improvement programme works on site, from the moment an observation is raised through to a completed project with a verified result. It covers how you and your team contribute, what the CI Specialist does with that information, and what you will see reported back.
+    </p>
+  </div>
+  <div class="cover-footer">
+    <div class="meta">Continuous Improvement · Site Operations<br/>For Ops Managers, Shift Managers and Team Leaders</div>
+    <div class="logo">continuum<span>CI</span></div>
+  </div>
+</div>
+
+<!-- ══════════ PAGE 1 - THE BIG PICTURE ══════════ -->
+<div class="page page-break">
+  <div class="sec-header">
+    <div class="sec-num">Overview</div>
+    <h2>The CI Life Cycle at a Glance</h2>
+    <div class="sec-sub">Six stages from observation to sustained result</div>
+  </div>
+
+  <p>
+    Every improvement on site starts with someone noticing something: a process that wastes time, a step that causes errors, a safety concern, or simply a better way of doing something. The CI programme exists to capture those observations, investigate the right ones, and turn them into permanent fixes backed by data.
+  </p>
+  <p>
+    The life cycle below shows how that journey works, who is involved at each stage, and what the expected output is.
+  </p>
+
+  <div class="flow" style="margin: 20px 0;">
+    <div class="flow-step col-orange"><span class="sn">Stage 1</span>OBSERVE</div>
+    <div class="flow-step col-blue"><span class="sn">Stage 2</span>REVIEW &amp; LOG</div>
+    <div class="flow-step col-purple"><span class="sn">Stage 3</span>DEFINE</div>
+    <div class="flow-step col-amber"><span class="sn">Stage 4</span>INVESTIGATE</div>
+    <div class="flow-step col-green"><span class="sn">Stage 5</span>IMPROVE</div>
+    <div class="flow-step col-grey"><span class="sn">Stage 6</span>CLOSE</div>
+  </div>
+
+  <table style="margin-top: 8px;">
+    <thead>
+      <tr><th>Stage</th><th>What Happens</th><th>Who</th><th>Output</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="td-label" style="color:#EA580C;">1. Observe</td>
+        <td>A problem, waste or improvement opportunity is spotted on the floor</td>
+        <td><span class="role-badge rb-all">Anyone</span></td>
+        <td>Observation submitted via QR form or logged directly by CI</td>
+      </tr>
+      <tr>
+        <td class="td-label" style="color:#1D4ED8;">2. Review &amp; Log</td>
+        <td>CI Specialist reviews all submissions, filters what is actionable, logs valid observations</td>
+        <td><span class="role-badge rb-ci">CI Specialist</span></td>
+        <td>Observation recorded with area, waste type and impact estimate</td>
+      </tr>
+      <tr>
+        <td class="td-label" style="color:#6D28D9;">3. Define</td>
+        <td>Observations that recur or show significant impact are developed into a scoped problem statement with a measurable target</td>
+        <td><span class="role-badge rb-ci">CI Specialist</span></td>
+        <td>Problem statement, baseline metric, improvement target</td>
+      </tr>
+      <tr>
+        <td class="td-label" style="color:#B45309;">4. Investigate</td>
+        <td>Root cause is found using structured tools: data analysis, process observation, team interviews</td>
+        <td><span class="role-badge rb-ci">CI Specialist</span> <span class="role-badge rb-tl">Team Leaders</span></td>
+        <td>Verified root cause, counter-measure options</td>
+      </tr>
+      <tr>
+        <td class="td-label" style="color:#16a34a;">5. Improve</td>
+        <td>Solution is trialled, measured and validated before full implementation</td>
+        <td><span class="role-badge rb-ci">CI Specialist</span> <span class="role-badge rb-mgr">Ops Manager</span> <span class="role-badge rb-tl">Team Leaders</span></td>
+        <td>Confirmed improvement, roll-out plan, team briefed</td>
+      </tr>
+      <tr>
+        <td class="td-label" style="color:#374151;">6. Close</td>
+        <td>Result sustained for minimum 4 weeks. SOP written, team trained, before/after figures documented</td>
+        <td><span class="role-badge rb-ci">CI Specialist</span></td>
+        <td>Closed project with verified result and written SOP</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-navy mt12">
+    <strong>Important:</strong> A project is only closed once the improvement has held for at least four weeks. A fix that lasts two weeks is not a fix. It is a temporary patch. The CI programme only counts sustained results.
+  </div>
+</div>
+
+<!-- ══════════ PAGE 2 - OBSERVATION PIPELINE ══════════ -->
+<div class="page page-break">
+  <div class="sec-header">
+    <div class="sec-num">Stage 1 &amp; 2</div>
+    <h2>The Observation Pipeline</h2>
+    <div class="sec-sub">How observations reach the CI Specialist and what happens to them</div>
+  </div>
+
+  <h3>Two Sources of Observations</h3>
+  <p>Observations come in from two places. Both are equally important.</p>
+
+  <div class="two-col">
+    <div class="info-box">
+      <div class="ib-label">Source 1: Team Submissions</div>
+      <div class="ib-val">QR Code Form</div>
+      <p style="margin-top: 6px; font-size: 9.5pt; color: #374151;">Anyone on site scans the QR code, fills in a short form on their phone, and submits. Takes under 60 seconds.</p>
+    </div>
+    <div class="info-box">
+      <div class="ib-label">Source 2: CI Direct</div>
+      <div class="ib-val">Daily Floor Walk</div>
+      <p style="margin-top: 6px; font-size: 9.5pt; color: #374151;">The CI Specialist conducts structured walks of all operational areas daily, logging waste and process deviations directly.</p>
+    </div>
+  </div>
+
+  <h3>The QR Code Form: How It Works</h3>
+  <div class="steps">
+    <div class="step-row no-break">
+      <div class="step-num-box">1</div>
+      <div class="step-content">
+        <div class="step-title">Scan the QR code</div>
+        <p>QR codes are displayed at shift brief stations, noticeboards and team leader desks. Scan with any phone camera. No app needed.</p>
+      </div>
+    </div>
+    <div class="step-row no-break">
+      <div class="step-num-box">2</div>
+      <div class="step-content">
+        <div class="step-title">Fill in the short form</div>
+        <p>Name (optional), role, area, what you observed, issue type and urgency. Plain English. No CI knowledge needed.</p>
+      </div>
+    </div>
+    <div class="step-row no-break">
+      <div class="step-num-box">3</div>
+      <div class="step-content">
+        <div class="step-title">Submit</div>
+        <p>The submission is sent immediately. No follow-up needed from you. The CI Specialist picks it up from there.</p>
+      </div>
+    </div>
+    <div class="step-row no-break">
+      <div class="step-num-box">4</div>
+      <div class="step-content">
+        <div class="step-title">CI Specialist reviews all submissions</div>
+        <p>Every submission is read. The CI Specialist decides whether to log it as a formal observation, raise it directly as an improvement idea, or note it for monitoring. Nothing is ignored, but not every submission becomes a project.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout callout-amber">
+    <strong>What makes a good observation?</strong> Specific beats vague. "Associates walking to the label printer in Zone C, estimated 3-4 times per hour" is far more useful than "motion waste in Zone C." The more specific the observation, the faster the CI Specialist can act on it.
+  </div>
+
+  <h3>What to Encourage Your Team to Submit</h3>
+  <table>
+    <thead><tr><th>Good to submit</th><th>Examples</th></tr></thead>
+    <tbody>
+      <tr><td class="td-label">Repeated delays or waiting</td><td>System down time, waiting for equipment, idle periods at shift start</td></tr>
+      <tr><td class="td-label">Steps that seem unnecessary</td><td>Double-checking items already scanned, re-labelling work already done</td></tr>
+      <tr><td class="td-label">Quality or accuracy issues</td><td>Items being picked incorrectly, packaging errors, returns patterns</td></tr>
+      <tr><td class="td-label">Safety or near misses</td><td>Pedestrian/vehicle conflicts, trip hazards, unclear signage</td></tr>
+      <tr><td class="td-label">Layout or equipment frustrations</td><td>Tools not where they are needed, poor workstation setup, congestion points</td></tr>
+      <tr><td class="td-label">Ideas for a better way</td><td>Any suggestion from a team member on how their area could work better</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════ PAGE 3 - FROM OBSERVATION TO PROJECT ══════════ -->
+<div class="page page-break">
+  <div class="sec-header">
+    <div class="sec-num">Stages 3 &amp; 4</div>
+    <h2>From Observation to Active Project</h2>
+    <div class="sec-sub">How the CI Specialist decides what to work on and what a project actually involves</div>
+  </div>
+
+  <h3>Not Every Observation Becomes a Project</h3>
+  <p>
+    A single observation is a data point. The CI Specialist monitors patterns. When the same issue appears across multiple observations, shifts or areas, it signals that a structured improvement project is warranted. Low-effort fixes are implemented quickly without a full project. More complex problems get the full treatment.
+  </p>
+
+  <div class="flow" style="margin: 16px 0;">
+    <div class="flow-step col-orange"><span class="sn">Input</span>OBSERVATIONS</div>
+    <div class="flow-step"><span class="sn">Review</span>PATTERN SPOTTED</div>
+    <div class="flow-step col-blue"><span class="sn">Scoped</span>PROBLEM DEFINED</div>
+    <div class="flow-step col-green"><span class="sn">Go</span>PROJECT OPENED</div>
+  </div>
+
+  <h3>Project Types: Matched to Problem Size</h3>
+  <p>The CI Specialist selects the right level of rigour for the size of the problem. Overcomplicating a simple fix wastes time. Under-planning a complex one leads to recurrence.</p>
+
+  <table>
+    <thead><tr><th>Type</th><th>When It's Used</th><th>Typical Duration</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong style="color:#16a34a;">Quick Win</strong></td>
+        <td>Clear problem, obvious fix, low risk. Implement, measure, confirm, done.</td>
+        <td>1-4 weeks</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#854D0E;">Yellow Belt</strong></td>
+        <td>Area-level problem needing data collection, root cause analysis and a trialled fix</td>
+        <td>4-8 weeks</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#1D4ED8;">Green Belt</strong></td>
+        <td>Significant cross-functional problem requiring structured DMAIC methodology and statistical validation</td>
+        <td>8-16 weeks</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#991B1B;">Investigation</strong></td>
+        <td>A spike, complaint or safety concern requiring urgent scoping before deciding next steps</td>
+        <td>1-3 weeks</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>DMAIC: The Project Framework</h3>
+  <p>All projects above Quick Win level follow the DMAIC framework, a structured five-stage methodology that ensures the root cause is found and fixed, not just the symptom.</p>
+
+  <div class="flow" style="margin: 14px 0;">
+    <div class="flow-step col-blue"><span class="sn">D</span>DEFINE</div>
+    <div class="flow-step col-purple"><span class="sn">M</span>MEASURE</div>
+    <div class="flow-step col-amber"><span class="sn">A</span>ANALYSE</div>
+    <div class="flow-step col-green"><span class="sn">I</span>IMPROVE</div>
+    <div class="flow-step col-teal"><span class="sn">C</span>CONTROL</div>
+  </div>
+
+  <table>
+    <thead><tr><th>Stage</th><th>What the CI Specialist Does</th><th>Your Role</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="td-label" style="color:#1D4ED8;">Define</td>
+        <td>Writes a clear problem statement, agrees the metric and target, scopes the work</td>
+        <td>Agree scope, confirm the problem is the right priority</td>
+      </tr>
+      <tr>
+        <td class="td-label" style="color:#6D28D9;">Measure</td>
+        <td>Collects data to establish the current baseline. How bad is the problem right now?</td>
+        <td>Support data access, confirm baseline is accurate</td>
+      </tr>
+      <tr>
+        <td class="td-label" style="color:#B45309;">Analyse</td>
+        <td>Finds the verified root cause using tools like 5-Why, Fishbone diagrams and data analysis</td>
+        <td>Input from TLs and associates on what they see on the floor</td>
+      </tr>
+      <tr>
+        <td class="td-label" style="color:#16a34a;">Improve</td>
+        <td>Designs, trials and validates the fix before full roll-out</td>
+        <td>Support the trial: provide resource, feedback and operational buy-in</td>
+      </tr>
+      <tr>
+        <td class="td-label" style="color:#0E7490;">Control</td>
+        <td>Writes the SOP, briefs the team, confirms the improvement has sustained for 4+ weeks</td>
+        <td>Ensure team follow the new SOP and flag any deviation</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════ PAGE 4 - WHAT YOU WILL SEE + EXPECTATIONS ══════════ -->
+<div class="page page-break">
+  <div class="sec-header">
+    <div class="sec-num">Stages 5 &amp; 6</div>
+    <h2>Reporting, Expectations &amp; Your Role</h2>
+    <div class="sec-sub">What you will receive, what is expected of you, and how to escalate</div>
+  </div>
+
+  <h3>What You Will Receive</h3>
+  <table>
+    <thead><tr><th>What</th><th>Frequency</th><th>Contents</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="td-label">CI Excel Report</td>
+        <td>Weekly (exported from Continuum)</td>
+        <td>Full programme snapshot in a single Excel file covering: Overview, KPI performance vs target with RAG status, active and completed projects, improvement pipeline, activity log and CI maturity score</td>
+      </tr>
+      <tr>
+        <td class="td-label">Verbal Update</td>
+        <td>Weekly or as agreed</td>
+        <td>Walk-through of the Excel report covering where each project stands, what the KPIs are showing, any blockers and any items needing your input or decision</td>
+      </tr>
+      <tr>
+        <td class="td-label">Project Close Summary</td>
+        <td>On each project close</td>
+        <td>Before vs after result, improvement figure, SOP reference, team briefed confirmation</td>
+      </tr>
+      <tr>
+        <td class="td-label">Escalation flag</td>
+        <td>As needed</td>
+        <td>If a project hits a blocker that needs management input, resource or a decision, you will be told directly and promptly</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>About the CI Excel Report</h3>
+  <p>The weekly Excel report is generated directly from the Continuum CI system and contains everything you need to understand the state of the CI programme at a glance. You do not need access to the system itself. The report brings everything to you.</p>
+  <table>
+    <thead><tr><th>Tab</th><th>What It Shows</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="td-label">Overview</td>
+        <td>High-level summary: total projects, active vs closed, pipeline count, headline KPI performance and overall CI maturity score</td>
+      </tr>
+      <tr>
+        <td class="td-label">CI Impact</td>
+        <td>Cumulative value delivered: time saved, cost avoided, defects eliminated, and a breakdown of completed project results</td>
+      </tr>
+      <tr>
+        <td class="td-label">KPIs</td>
+        <td>Each tracked metric vs its target, RAG rated (Green = on target, Amber = close, Red = off target), with a 4-week trend view</td>
+      </tr>
+      <tr>
+        <td class="td-label">Projects</td>
+        <td>Every active project: stage, owner, target, last updated and current status</td>
+      </tr>
+      <tr>
+        <td class="td-label">Pipeline</td>
+        <td>Ideas and observations in the queue, showing what is being considered for the next project cycle</td>
+      </tr>
+      <tr>
+        <td class="td-label">Activity</td>
+        <td>A log of all CI activity over the period: floor walks, observations logged, meetings and actions completed</td>
+      </tr>
+      <tr>
+        <td class="td-label">Maturity</td>
+        <td>A scored assessment of CI maturity across six dimensions, showing where the programme is strong and where to focus next</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="callout callout-navy" style="margin-top: 10px;">
+    <strong>RAG Status explained:</strong> Green means the KPI is at or above target. Amber means it is within 5% of target. Red means it is more than 5% below target and needs attention. Every KPI in the report is colour coded so you can see the picture at a glance without reading every number.
+  </div>
+
+  <h3>What Is Expected of You</h3>
+  <div class="steps">
+    <div class="step-row no-break">
+      <div class="step-num-box" style="background:#F97316;">1</div>
+      <div class="step-content">
+        <div class="step-title">Encourage your team to use the QR form</div>
+        <p>The more observations that come in, the stronger the improvement pipeline. Brief your team at shift start, put QR codes up visibly, and make it clear that submissions are acted on, not ignored.</p>
+      </div>
+    </div>
+    <div class="step-row no-break">
+      <div class="step-num-box" style="background:#F97316;">2</div>
+      <div class="step-content">
+        <div class="step-title">Support root cause investigations</div>
+        <p>When the CI Specialist is in the Analyse stage, they will need time with your team leaders and associates. Please support access to the floor and facilitate honest conversations. The quality of the root cause depends on it.</p>
+      </div>
+    </div>
+    <div class="step-row no-break">
+      <div class="step-num-box" style="background:#F97316;">3</div>
+      <div class="step-content">
+        <div class="step-title">Back the solution during the trial</div>
+        <p>When a fix is being trialled, it needs consistent application to get valid results. If the trial is only followed some of the time, the data is worthless. Your visibility and backing makes the difference.</p>
+      </div>
+    </div>
+    <div class="step-row no-break">
+      <div class="step-num-box" style="background:#F97316;">4</div>
+      <div class="step-content">
+        <div class="step-title">Enforce the SOP after close</div>
+        <p>The most common reason improvements fail is that the new standard is not followed once the CI project closes. When a new SOP is issued, it needs to be embedded in your daily checks and shift briefs, not filed away.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>How to Escalate a Concern</h3>
+  <div class="callout callout-blue">
+    If you have a concern that needs urgent CI attention (a safety spike, a sudden performance drop or a process failing on the floor), do not wait for the next report cycle. <strong>Raise it directly with the CI Specialist the same day.</strong> Investigations can be opened within 24 hours for urgent issues.
+  </div>
+
+  <hr class="divider"/>
+
+  <h3>Key Principles</h3>
+  <div class="two-col">
+    <div class="callout callout-green" style="margin: 0;">
+      <strong>Fix the process, not the person.</strong> If the same mistake keeps happening with different people, the process is wrong, not the team. CI investigates the system, not the individual.
+    </div>
+    <div class="callout callout-amber" style="margin: 0;">
+      <strong>Data first, opinion second.</strong> Every decision in a CI project is driven by data. An improvement that cannot be measured cannot be confirmed. Anecdotal evidence alone is not enough.
+    </div>
+  </div>
+  <div class="two-col" style="margin-top: 12px;">
+    <div class="callout callout-navy" style="margin: 0;">
+      <strong>Small observations lead to big improvements.</strong> The most impactful projects often start from a single observation by an associate. No observation is too small to submit.
+    </div>
+    <div class="callout callout-blue" style="margin: 0;">
+      <strong>A closed project is a permanent fix.</strong> Projects are not closed until the result has sustained. When a project closes, that improvement is locked in, not revisited and not undone.
+    </div>
+  </div>
+
+  <div class="footer-bar" style="margin-top: 28px;">
+    <div class="meta">
+      CI Project Life Cycle · Ops Manager Procedure<br/>
+      Continuous Improvement · Site Operations · Confidential
+    </div>
+    <div class="logo">continuum<span>CI</span></div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Continuum CI — Master Workflow Guide</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 11pt; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #111827;
+    background: #fff;
+    line-height: 1.55;
+  }
+
+  /* ── Colour Palette ── */
+  :root {
+    --navy:    #0F172A;
+    --navy2:   #1E293B;
+    --orange:  #F97316;
+    --orange2: #EA580C;
+    --slate:   #64748B;
+    --light:   #F8FAFC;
+    --border:  #E2E8F0;
+    --gn-bg:   #DCFCE7; --gn-tx: #166534;
+    --am-bg:   #FEF9C3; --am-tx: #854D0E;
+    --rd-bg:   #FEE2E2; --rd-tx: #991B1B;
+    --bl-bg:   #EFF6FF; --bl-tx: #1D4ED8;
+    --pu-bg:   #F3E8FF; --pu-tx: #6D28D9;
+    --te-bg:   #ECFEFF; --te-tx: #0E7490;
+  }
+
+  /* ── Print settings ── */
+  @page {
+    size: A4;
+    margin: 18mm 16mm 16mm 16mm;
+    @bottom-right { content: counter(page) ' / ' counter(pages); font-size: 8pt; color: #94A3B8; }
+  }
+  @media print {
+    body { font-size: 10pt; }
+    .page-break { page-break-before: always; }
+    .no-break    { page-break-inside: avoid; }
+    .cover       { page-break-after: always; }
+    header.running { display: block !important; }
+  }
+  @media screen {
+    body { max-width: 900px; margin: 0 auto; padding: 24px; background: #f1f5f9; }
+    .page { background: #fff; margin-bottom: 32px; padding: 40px 48px; box-shadow: 0 4px 24px rgba(0,0,0,.10); border-radius: 4px; }
+  }
+
+  /* ── Screen wrapper (ignored in print) ── */
+  .page { padding: 0; }
+  @media screen { .page { padding: 40px 48px; } }
+
+  /* ─────────────────────────────────────────────
+     COVER
+  ───────────────────────────────────────────── */
+  .cover {
+    background: var(--navy);
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 56px 56px 48px;
+  }
+  @media screen { .cover { min-height: auto; padding: 56px; border-radius: 4px; } }
+  .cover-badge {
+    display: inline-block;
+    background: var(--orange);
+    color: #fff;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 32px;
+  }
+  .cover h1 {
+    font-size: 32pt;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .cover h1 span { color: var(--orange); }
+  .cover .cover-sub {
+    font-size: 13pt;
+    color: #94A3B8;
+    margin-bottom: 40px;
+    max-width: 540px;
+  }
+  .cover-divider {
+    width: 56px; height: 4px;
+    background: var(--orange);
+    margin: 24px 0;
+    border-radius: 2px;
+  }
+  .cover-desc {
+    font-size: 11pt;
+    color: #CBD5E1;
+    max-width: 560px;
+    line-height: 1.7;
+  }
+  .cover-footer {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid #1E293B;
+  }
+  .cover-footer .meta { font-size: 9pt; color: #475569; }
+  .cover-footer .logo {
+    font-size: 18pt;
+    font-weight: 800;
+    color: var(--orange);
+    letter-spacing: -0.5px;
+  }
+  .cover-footer .logo span { color: #fff; }
+
+  /* ─────────────────────────────────────────────
+     TOC
+  ───────────────────────────────────────────── */
+  .toc-page { padding-top: 32px; }
+  .toc-title {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 24px;
+  }
+  .toc-entry {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px dotted var(--border);
+  }
+  .toc-entry .toc-num {
+    font-size: 9pt;
+    font-weight: 700;
+    color: var(--orange);
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .toc-entry .toc-label { font-size: 10.5pt; font-weight: 600; color: var(--navy); flex: 1; }
+  .toc-entry .toc-sub   { font-size: 9pt; color: var(--slate); flex: 1; margin-left: 8px; }
+  .toc-entry .toc-pg    { font-size: 9pt; color: var(--slate); }
+  .toc-section-gap { margin-top: 14px; }
+
+  /* ─────────────────────────────────────────────
+     SECTION HEADERS
+  ───────────────────────────────────────────── */
+  .section-header {
+    background: var(--navy);
+    color: #fff;
+    padding: 18px 24px 14px;
+    margin-bottom: 28px;
+    border-left: 5px solid var(--orange);
+  }
+  .section-header .sec-num {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 4px;
+  }
+  .section-header h2 {
+    font-size: 18pt;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.2;
+  }
+  .section-header .sec-sub {
+    font-size: 9.5pt;
+    color: #94A3B8;
+    margin-top: 4px;
+  }
+
+  /* ─────────────────────────────────────────────
+     TYPOGRAPHY
+  ───────────────────────────────────────────── */
+  h3 {
+    font-size: 12pt;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 22px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid var(--orange);
+    display: inline-block;
+  }
+  h4 {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: var(--navy2);
+    margin: 16px 0 6px;
+  }
+  p { margin-bottom: 10px; color: #374151; font-size: 10.5pt; }
+  ul, ol { margin: 8px 0 12px 20px; color: #374151; font-size: 10.5pt; }
+  li { margin-bottom: 4px; line-height: 1.5; }
+  strong { color: var(--navy); }
+
+  /* ─────────────────────────────────────────────
+     CALLOUT BOXES
+  ───────────────────────────────────────────── */
+  .callout {
+    padding: 14px 18px;
+    border-radius: 3px;
+    margin: 14px 0;
+    border-left: 4px solid;
+    font-size: 10pt;
+  }
+  .callout-blue  { background: var(--bl-bg); border-color: #1D4ED8; color: #1e3a8a; }
+  .callout-green { background: var(--gn-bg); border-color: #16a34a; color: #14532d; }
+  .callout-amber { background: var(--am-bg); border-color: #d97706; color: #78350f; }
+  .callout-navy  { background: var(--light); border-color: var(--navy); color: var(--navy); }
+  .callout strong { color: inherit; }
+
+  /* ─────────────────────────────────────────────
+     PROCESS FLOW DIAGRAMS
+  ───────────────────────────────────────────── */
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 20px 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .flow-step {
+    flex: 1;
+    min-width: 80px;
+    background: var(--navy);
+    color: #fff;
+    text-align: center;
+    padding: 12px 8px 10px;
+    position: relative;
+    font-size: 8.5pt;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .flow-step::after {
+    content: '';
+    position: absolute;
+    top: 50%; right: -14px;
+    transform: translateY(-50%);
+    width: 0; height: 0;
+    border-top: 18px solid transparent;
+    border-bottom: 18px solid transparent;
+    border-left: 14px solid var(--navy);
+    z-index: 2;
+  }
+  .flow-step:last-child::after { display: none; }
+  .flow-step .step-num {
+    display: block;
+    font-size: 7pt;
+    font-weight: 400;
+    color: #94A3B8;
+    margin-bottom: 3px;
+    letter-spacing: 1px;
+  }
+  .flow-step.col-orange  { background: var(--orange); }
+  .flow-step.col-orange::after  { border-left-color: var(--orange); }
+  .flow-step.col-define  { background: #1D4ED8; }
+  .flow-step.col-define::after  { border-left-color: #1D4ED8; }
+  .flow-step.col-measure { background: #6D28D9; }
+  .flow-step.col-measure::after { border-left-color: #6D28D9; }
+  .flow-step.col-analyse { background: #B45309; }
+  .flow-step.col-analyse::after { border-left-color: #B45309; }
+  .flow-step.col-improve { background: #059669; }
+  .flow-step.col-improve::after { border-left-color: #059669; }
+  .flow-step.col-control { background: #0E7490; }
+  .flow-step.col-control::after { border-left-color: #0E7490; }
+  .flow-step.col-closed  { background: #374151; }
+  .flow-step.col-closed::after  { border-left-color: #374151; }
+  .flow-step.col-green   { background: #16a34a; }
+  .flow-step.col-green::after   { border-left-color: #16a34a; }
+
+  /* vertical flow */
+  .vflow { margin: 16px 0; }
+  .vflow-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 0;
+  }
+  .vflow-box {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 3px;
+    font-size: 9.5pt;
+    font-weight: 600;
+    border-left: 4px solid;
+  }
+  .vflow-arrow {
+    width: 100%;
+    text-align: center;
+    font-size: 14pt;
+    color: var(--slate);
+    line-height: 1.2;
+    padding: 2px 0;
+  }
+
+  /* ─────────────────────────────────────────────
+     TABLES
+  ───────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 9.5pt;
+  }
+  thead tr { background: var(--navy); color: #fff; }
+  thead th {
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 8.5pt;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  tbody tr:nth-child(even) { background: var(--light); }
+  tbody tr:nth-child(odd)  { background: #fff; }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    color: #374151;
+  }
+  .td-label { font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .td-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 8pt;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* ─────────────────────────────────────────────
+     BELT / TYPE BADGES
+  ───────────────────────────────────────────── */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .badge-qw  { background: #DCFCE7; color: #166534; }
+  .badge-yb  { background: #FEF9C3; color: #854D0E; }
+  .badge-gb  { background: #DBEAFE; color: #1D4ED8; }
+  .badge-bb  { background: #EDE9FE; color: #5B21B6; }
+  .badge-inv { background: #FEE2E2; color: #991B1B; }
+
+  /* ─────────────────────────────────────────────
+     PROJECT CARD (for type overview)
+  ───────────────────────────────────────────── */
+  .project-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 16px 0;
+  }
+  .project-card {
+    border: 1px solid var(--border);
+    border-top: 4px solid;
+    padding: 14px 16px;
+    border-radius: 2px;
+    background: #fff;
+  }
+  .project-card h4 { margin: 8px 0 6px; font-size: 10.5pt; }
+  .project-card p  { font-size: 9.5pt; margin-bottom: 6px; }
+  .project-card .card-meta { font-size: 8.5pt; color: var(--slate); }
+  .pc-qw  { border-top-color: #16a34a; }
+  .pc-yb  { border-top-color: #d97706; }
+  .pc-gb  { border-top-color: #1D4ED8; }
+  .pc-bb  { border-top-color: #5B21B6; }
+  .pc-inv { border-top-color: #991B1B; }
+
+  /* ─────────────────────────────────────────────
+     DMAIC STAGE BLOCKS
+  ───────────────────────────────────────────── */
+  .dmaic-block {
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .dmaic-header {
+    padding: 10px 16px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .dmaic-header .stage-lbl {
+    font-size: 12pt;
+    font-weight: 800;
+    min-width: 80px;
+  }
+  .dmaic-header .stage-desc {
+    font-size: 9pt;
+    opacity: 0.85;
+    font-weight: 400;
+  }
+  .dmaic-body {
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    background: #fff;
+  }
+  .dmaic-col h5 {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--slate);
+    margin-bottom: 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dmaic-col ul { margin: 0 0 0 14px; }
+  .dmaic-col li { font-size: 9pt; margin-bottom: 3px; color: #374151; }
+
+  /* ─────────────────────────────────────────────
+     PROCESS MAP (simple box & arrow)
+  ───────────────────────────────────────────── */
+  .pmap {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 16px;
+    background: var(--light);
+    margin: 16px 0;
+  }
+  .pmap-title {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 14px;
+  }
+
+  /* ─────────────────────────────────────────────
+     INFO GRID (2-col key/value)
+  ───────────────────────────────────────────── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0;
+  }
+  .info-item {
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--navy);
+    padding: 10px 12px;
+    border-radius: 2px;
+  }
+  .info-item .lbl { font-size: 8pt; color: var(--slate); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .info-item .val { font-size: 10pt; font-weight: 700; color: var(--navy); margin-top: 2px; }
+
+  /* ─────────────────────────────────────────────
+     RUNNING HEADER (print only)
+  ───────────────────────────────────────────── */
+  header.running {
+    display: none;
+    position: running(header);
+    font-size: 8pt;
+    color: #94A3B8;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+
+  /* ─────────────────────────────────────────────
+     UTILITY
+  ───────────────────────────────────────────── */
+  .mt16 { margin-top: 16px; }
+  .mt24 { margin-top: 24px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .orange  { color: var(--orange); font-weight: 700; }
+  .muted   { color: var(--slate); font-size: 9.5pt; }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 12px 0;
+  }
+  .highlight-box {
+    background: var(--navy);
+    color: #fff;
+    padding: 14px 18px;
+    border-radius: 3px;
+    margin: 16px 0;
+  }
+  .highlight-box p { color: #CBD5E1; margin-bottom: 6px; }
+  .highlight-box strong { color: #fff; }
+</style>
+</head>
+<body>
+
+<header class="running">Continuum CI — Master Workflow Guide · Confidential</header>
+
+<!-- ══════════════════════════════════════════════════════════════
+     COVER
+════════════════════════════════════════════════════════════════ -->
+<div class="page cover">
+  <div>
+    <div class="cover-badge">Confidential — Internal Reference</div>
+    <h1>Continuous Improvement<br/><span>Master Workflow Guide</span></h1>
+    <p class="cover-sub">End-to-end operating framework for a CI Specialist — from floor observation to closed project, stakeholder reporting and data-driven decision making.</p>
+    <div class="cover-divider"></div>
+    <p class="cover-desc">
+      This document sets out the full operating model for a site-based Continuous Improvement function.
+      It covers how improvement opportunities are identified, captured, prioritised and delivered through
+      a structured pipeline — from raw floor observation through to closed, sustained projects with
+      measurable before-and-after results. It also describes how performance data is tracked, analysed
+      and reported to site leadership through the Continuum CI management platform and Excel-based
+      stakeholder reporting.
+    </p>
+  </div>
+  <div class="cover-footer">
+    <div class="meta">
+      Continuous Improvement · Site Operations<br/>
+      Version 1.0 · 2026
+    </div>
+    <div class="logo">continuum<span>CI</span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break toc-page">
+  <div class="toc-title">Contents</div>
+
+  <div class="toc-entry">
+    <span class="toc-num">01</span>
+    <span class="toc-label">The CI Specialist Role</span>
+    <span class="toc-sub">Purpose, daily cadence, responsibilities</span>
+  </div>
+  <div class="toc-entry">
+    <span class="toc-num">02</span>
+    <span class="toc-label">Observation Workflow</span>
+    <span class="toc-sub">Floor walk → waste identification → logging in Continuum</span>
+  </div>
+  <div class="toc-entry">
+    <span class="toc-num">03</span>
+    <span class="toc-label">The Idea Pipeline</span>
+    <span class="toc-sub">Idea → Definition → Validation → Project assignment</span>
+  </div>
+  <div class="toc-entry">
+    <span class="toc-num">04</span>
+    <span class="toc-label">Portfolio Management</span>
+    <span class="toc-sub">Organising work into portfolios, pipeline view, governance</span>
+  </div>
+  <div class="toc-entry">
+    <span class="toc-num">05</span>
+    <span class="toc-label">Project Types &amp; Complexity</span>
+    <span class="toc-sub">Quick Win, Yellow Belt, Green Belt, Black Belt, Investigation</span>
+  </div>
+  <div class="toc-entry">
+    <span class="toc-num">06</span>
+    <span class="toc-label">DMAIC — Stage by Stage</span>
+    <span class="toc-sub">Tools, deliverables, stage gates at each phase</span>
+  </div>
+  <div class="toc-entry">
+    <span class="toc-num">07</span>
+    <span class="toc-label">KPI Tracking &amp; Data Analysis</span>
+    <span class="toc-sub">Metric logging, trend analysis, SPC signals, RAG status</span>
+  </div>
+  <div class="toc-entry">
+    <span class="toc-num">08</span>
+    <span class="toc-label">Reporting &amp; Stakeholder Visibility</span>
+    <span class="toc-sub">Excel export, GM briefings, performance review evidence</span>
+  </div>
+  <div class="toc-entry">
+    <span class="toc-num">09</span>
+    <span class="toc-label">Continuum — End-to-End System Overview</span>
+    <span class="toc-sub">How all workflows connect inside the platform</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 1 — THE CI SPECIALIST ROLE
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-header">
+    <div class="sec-num">Section 01</div>
+    <h2>The CI Specialist Role</h2>
+    <div class="sec-sub">Purpose, daily operating cadence and core responsibilities on site</div>
+  </div>
+
+  <h3>Purpose</h3>
+  <p>
+    The Continuous Improvement Specialist is responsible for driving structured, data-led improvement
+    across site operations. The role sits between the floor and leadership — translating operational
+    problems into evidence-based projects, delivering measurable results, and building a culture where
+    improvement is a daily habit rather than a reactive fix.
+  </p>
+  <p>
+    The CI Specialist does not just manage projects. They observe, question, measure, and challenge —
+    constantly looking for the gap between what is happening and what should be happening, then
+    leading the effort to close that gap permanently.
+  </p>
+
+  <div class="callout callout-navy">
+    <strong>Core mandate:</strong> Identify waste. Quantify the problem. Deliver a sustainable fix. Prove it worked.
+  </div>
+
+  <h3>Core Responsibilities</h3>
+  <div class="two-col">
+    <div>
+      <h4>Operational</h4>
+      <ul>
+        <li>Conduct structured floor observations across all operational areas</li>
+        <li>Log waste, defects and process deviations as they are observed</li>
+        <li>Track and analyse site KPIs against targets daily</li>
+        <li>Identify and escalate performance signals before they become problems</li>
+        <li>Lead and facilitate problem-solving sessions with Team Leaders and associates</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Project &amp; Programme</h4>
+      <ul>
+        <li>Manage a portfolio of active improvement projects at varying levels of complexity</li>
+        <li>Write project charters, define scope and set measurable targets</li>
+        <li>Apply the correct methodology (DMAIC, Quick Win, Investigation) to each project type</li>
+        <li>Write SOPs for all improved processes and brief operational teams</li>
+        <li>Close projects with verified, sustained results and hand over to operations</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Daily &amp; Weekly Operating Cadence</h3>
+  <table>
+    <thead>
+      <tr><th>Frequency</th><th>Activity</th><th>Output / Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="td-label">Daily</td>
+        <td>Floor walk — all key operational areas, shift start and mid-shift</td>
+        <td>Observations logged in Continuum, waste types categorised</td>
+      </tr>
+      <tr>
+        <td class="td-label">Daily</td>
+        <td>KPI entry — log latest performance data against each tracked metric</td>
+        <td>Trend updated, RAG status recalculated, signals flagged if needed</td>
+      </tr>
+      <tr>
+        <td class="td-label">Daily</td>
+        <td>Review active project actions — check for blockers, update progress</td>
+        <td>Projects kept moving, stalls identified before 14-day threshold</td>
+      </tr>
+      <tr>
+        <td class="td-label">Daily</td>
+        <td>Attend shift brief / daily stand-up with operational leadership</td>
+        <td>Stay connected to live ops issues, surface CI inputs from TLs</td>
+      </tr>
+      <tr>
+        <td class="td-label">Weekly</td>
+        <td>Review idea pipeline — score new ideas, progress to definition stage</td>
+        <td>Pipeline stays active, no ideas go stale, opportunities are not missed</td>
+      </tr>
+      <tr>
+        <td class="td-label">Weekly</td>
+        <td>Project governance review — check DMAIC stage gates, update charters</td>
+        <td>Evidence of structured progression, stage gate criteria met</td>
+      </tr>
+      <tr>
+        <td class="td-label">Weekly</td>
+        <td>Generate and review Excel CI Report — check data synced correctly</td>
+        <td>Stakeholder-ready report available for any GM or manager review</td>
+      </tr>
+      <tr>
+        <td class="td-label">Monthly</td>
+        <td>CI Maturity self-assessment — score the five dimensions in Continuum</td>
+        <td>Honest view of programme maturity, identifies where to focus development</td>
+      </tr>
+      <tr>
+        <td class="td-label">Monthly</td>
+        <td>Portfolio review with site leader / GM — present CI programme status</td>
+        <td>Leadership visibility, alignment on priorities, escalation where needed</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>What Good Looks Like</h3>
+  <div class="info-grid">
+    <div class="info-item">
+      <div class="lbl">Observation practice</div>
+      <div class="val">Daily walks, logged, categorised — never just mental notes</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">Pipeline health</div>
+      <div class="val">Ideas flowing at every stage — never empty, never backlogged</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">Project hygiene</div>
+      <div class="val">No project stalled &gt;14 days without a documented reason</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">Data discipline</div>
+      <div class="val">KPIs logged daily, trends visible, signals acted on same week</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">Benefit evidence</div>
+      <div class="val">Every closed project has a before/after result documented</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">SOP completion</div>
+      <div class="val">SOPs written and teams briefed before any project is closed</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 2 — OBSERVATION WORKFLOW
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-header">
+    <div class="sec-num">Section 02</div>
+    <h2>Observation Workflow</h2>
+    <div class="sec-sub">From floor walk to structured log — turning what you see into data</div>
+  </div>
+
+  <h3>Why Observations Matter</h3>
+  <p>
+    Observations are the raw material of CI. Without a disciplined habit of logging what is seen on the
+    floor, opportunities pass unrecorded and problems recur. The observation workflow converts informal
+    walkthroughs into structured, searchable data — creating an evidence base that drives the idea
+    pipeline and supports root cause analysis.
+  </p>
+  <p>On a fulfillment operation, the floor walk covers all active process areas: inbound dock, stow buffer, pick floor, pack stations and despatch. Each area carries distinct waste patterns. Inbound tends to surface inventory and waiting waste; pick surfaces motion and defects; pack surfaces overprocessing and defects; despatch surfaces transport and overproduction. Structured observation across all lanes, every day, builds the evidence base the programme depends on.</p>
+
+  <div class="pmap">
+    <div class="pmap-title">Observation Workflow — End to End</div>
+    <div class="flow">
+      <div class="flow-step col-orange"><span class="step-num">01</span>Floor Walk</div>
+      <div class="flow-step"><span class="step-num">02</span>Identify Waste / Defect</div>
+      <div class="flow-step"><span class="step-num">03</span>Categorise Waste Type</div>
+      <div class="flow-step"><span class="step-num">04</span>Log in Continuum</div>
+      <div class="flow-step"><span class="step-num">05</span>Score &amp; Tag</div>
+      <div class="flow-step col-green"><span class="step-num">06</span>Raise as Idea</div>
+    </div>
+  </div>
+
+  <h3>The Eight Wastes (TIMWOODS)</h3>
+  <p>During each floor walk, the CI Specialist actively looks for the eight categories of waste. Every observation is logged against one of these types in Continuum, which builds a searchable, filterable record over time.</p>
+  <table>
+    <thead>
+      <tr><th>Waste Type</th><th>What to Look For on Site</th><th>Common Signals</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="td-label">Transport</td><td>Unnecessary movement of product, cages or materials further than needed between pick locations, buffer, pack stations or dock</td><td>HLOP travel between pick locations and cage buffer; cages moving to buffer then back; consumables not positioned at pack stations</td></tr>
+      <tr><td class="td-label">Inventory</td><td>Excess cages, product or consumables held beyond immediate need: cages stacking in buffer, inbound pallets waiting on dock, stow buffer backlog</td><td>Pick cages queuing beyond buffer capacity; inbound product on dock waiting IDRT check; stow buffer backlog delaying putaway</td></tr>
+      <tr><td class="td-label">Motion</td><td>Unnecessary movement by associates or HLOP travelling to charging areas, Problem Solve or between zones rather than completing work at point of need</td><td>HLOP driving to charging area mid-pick cycle; associates walking to PS/ICQA to report exceptions; awkward bin positions causing repeated reaching</td></tr>
+      <tr><td class="td-label">Waiting</td><td>Idle time for associates, HLOPs or processes waiting for scanner response, cage availability, system decision or batch release</td><td>Scanner login sequence (YubiKey + PIN); idle time between batch releases; queue at SLAM machine; waiting at buffer handoff for cage scan</td></tr>
+      <tr><td class="td-label">Overproduction</td><td>Stages running ahead of downstream capacity, with pick outpacing pack or pack outpacing despatch and volume building before the next stage is ready</td><td>Pick floor cages accumulating beyond buffer capacity; outbound sorted before load team is ready; pack building up ahead of SLAM availability</td></tr>
+      <tr><td class="td-label">Overprocessing</td><td>Steps that add no value to the next stage or the customer: additional scans, re-checks of already verified items, unnecessary handling</td><td>Scanning bin location AND unit barcode on every single pick; re-verification of product already checked at ICQA; unnecessary re-labelling</td></tr>
+      <tr><td class="td-label">Defects</td><td>Errors, exceptions, rework or non-conformance requiring investigation or correction at any stage</td><td>Unit mismatch on pick (gun ≠ bin); damaged or missing items (Pick Short); SLAM weight discrepancy; mislabeled product; returns requiring re-processing</td></tr>
+      <tr><td class="td-label">Skills</td><td>Underutilising associates' knowledge, experience or problem-solving capability</td><td>Recurring pick exceptions handled reactively without root cause work; TL ideas not captured; experienced associates on tasks below their capability with no development route</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Structuring an Observation Log Entry</h3>
+  <p>Each observation logged in Continuum captures the following information to ensure it is actionable and traceable:</p>
+  <div class="info-grid">
+    <div class="info-item">
+      <div class="lbl">Date &amp; Shift</div>
+      <div class="val">When was it observed? Day/night, shift time</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">Area / Zone</div>
+      <div class="val">Where exactly? Zone, bay, department, workstation</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">Waste Type</div>
+      <div class="val">Which of the eight wastes does this belong to?</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">Description</div>
+      <div class="val">What was seen? Specific, factual, no assumptions</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">Estimated Impact</div>
+      <div class="val">Units per hour lost, time lost, people affected, frequency</div>
+    </div>
+    <div class="info-item">
+      <div class="lbl">Linked Idea</div>
+      <div class="val">Raise as an idea in the pipeline if actionable</div>
+    </div>
+  </div>
+
+  <div class="callout callout-amber">
+    <strong>Discipline point:</strong> Observations must be logged on the day they are made. A mental note becomes worthless overnight. The value is in the searchable, dated record — not the memory.
+  </div>
+
+  <h3>From Observation to Idea</h3>
+  <p>
+    Not every observation immediately becomes an idea. Some are single data points — part of a pattern
+    that only becomes visible when several observations are reviewed together. The CI Specialist reviews
+    the observation log weekly, looking for patterns by waste type, area or shift, and raises ideas
+    where a cluster of related observations suggests a structured improvement is warranted.
+  </p>
+  <div class="vflow">
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#FEF9C3;border-color:#d97706;color:#78350f;">
+        <strong>Single observation</strong> — logged, tagged, dated. Filed for review.
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#DBEAFE;border-color:#1D4ED8;color:#1e3a8a;">
+        <strong>Pattern identified</strong> — 3+ related observations across area or time window. Review triggered.
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#DCFCE7;border-color:#16a34a;color:#14532d;">
+        <strong>Idea raised</strong> — problem statement drafted, metric identified, linked to portfolio. Enters idea pipeline.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 3 — THE IDEA PIPELINE
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-header">
+    <div class="sec-num">Section 03</div>
+    <h2>The Idea Pipeline</h2>
+    <div class="sec-sub">How potential improvements are captured, evaluated and converted into live projects</div>
+  </div>
+
+  <h3>Pipeline Overview</h3>
+  <p>
+    The idea pipeline is the structured funnel through which all improvement opportunities pass before
+    becoming active projects. It prevents reactive, ad-hoc project starts and ensures that work begins
+    with a clear problem statement, a defined metric and a validated business case.
+  </p>
+
+  <div class="pmap">
+    <div class="pmap-title">Idea Pipeline — Four Stages</div>
+    <div class="flow">
+      <div class="flow-step col-define"><span class="step-num">Stage 1</span>IDEA</div>
+      <div class="flow-step col-measure"><span class="step-num">Stage 2</span>DEFINITION</div>
+      <div class="flow-step col-analyse"><span class="step-num">Stage 3</span>VALIDATION</div>
+      <div class="flow-step col-green"><span class="step-num">Stage 4</span>PROJECT ASSIGNED</div>
+    </div>
+  </div>
+
+  <h3>Stage 1 — Idea</h3>
+  <p>
+    An idea is a brief statement of a problem or opportunity, raised from an observation, a discussion
+    with a Team Leader, a data signal or a near miss. At this stage the focus is capture, not analysis.
+    Ideas must be logged quickly before they are lost.
+  </p>
+  <div class="callout callout-blue">
+    <strong>Entry criteria:</strong> A clear problem statement in plain language. Which area does it affect? What is the symptom? Who raised it?
+  </div>
+  <ul>
+    <li>Linked to a portfolio (which operational area does this belong to?)</li>
+    <li>Tagged with a relevant waste type</li>
+    <li>Given an initial priority score: impact × effort estimate</li>
+    <li>No detailed analysis required at this stage — just capture and categorise</li>
+  </ul>
+
+  <h3>Stage 2 — Definition</h3>
+  <p>
+    Ideas that are scored sufficiently high, or that recur from multiple observations, are progressed
+    to Definition. The CI Specialist develops the idea into a structured problem statement and identifies
+    a measurable metric that will prove whether a fix has worked.
+  </p>
+  <div class="callout callout-blue">
+    <strong>Outputs at Definition:</strong> Written problem statement · Identified metric (what are we measuring?) · Current baseline (what is the number now?) · Target (what should it be?) · Scope boundaries (what is in / out of scope?)
+  </div>
+  <ul>
+    <li>The problem statement must describe the gap between current state and desired state</li>
+    <li>The metric must be measurable, repeatable and directly linked to the problem</li>
+    <li>Initial sizing — is this a Quick Win, Yellow Belt, Green Belt or Black Belt level of work?</li>
+  </ul>
+
+  <h3>Stage 3 — Validation</h3>
+  <p>
+    Before a project is formally opened, the definition is reviewed and validated. This stage ensures
+    the business case is sound, the scope is realistic and the right project type has been selected.
+    Validation is a governance checkpoint — it prevents wasted effort on poorly defined work.
+  </p>
+  <div class="callout callout-amber">
+    <strong>Validation checks:</strong> Does the problem statement match the data? Is the target realistic? Is the right methodology selected? Is there capacity to deliver this? Does it align to portfolio priorities?
+  </div>
+  <ul>
+    <li>For larger projects (Green Belt / Black Belt): business case presented to site manager</li>
+    <li>For Quick Wins / Yellow Belts: CI Specialist self-validates against defined criteria</li>
+    <li>If the idea does not pass validation it is either returned to Definition for rework or parked</li>
+  </ul>
+
+  <h3>Stage 4 — Project Assigned</h3>
+  <p>
+    A validated idea becomes a live project in Continuum. A project type is confirmed, a charter is
+    created, the stage is set to Define, and the DMAIC journey begins. The idea is removed from the
+    pipeline and tracked in the project register instead.
+  </p>
+
+  <hr class="divider"/>
+
+  <h3>Pipeline Health Principles</h3>
+  <table>
+    <thead><tr><th>Signal</th><th>What It Means</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td>No new ideas in the pipeline</td><td>Floor observations are not being made or logged</td><td>Increase walk frequency and observation discipline</td></tr>
+      <tr><td>Ideas stuck in Definition</td><td>Problem statements are not being developed</td><td>Schedule weekly pipeline review session</td></tr>
+      <tr><td>Many ideas, few projects</td><td>Validation is a bottleneck or capacity is limited</td><td>Prioritise ruthlessly — focus on highest-impact ideas first</td></tr>
+      <tr><td>Ideas being skipped straight to project</td><td>Pipeline stage-gating is being bypassed</td><td>Enforce Definition and Validation — underdefined projects fail</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 4 — PORTFOLIO MANAGEMENT
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-header">
+    <div class="sec-num">Section 04</div>
+    <h2>Portfolio Management</h2>
+    <div class="sec-sub">Organising projects by operational area, managing the programme as a whole</div>
+  </div>
+
+  <h3>What Is a Portfolio?</h3>
+  <p>
+    A portfolio is a grouping of improvement projects and pipeline ideas that relate to the same
+    operational area or function. Portfolios allow the CI Specialist to manage the programme at two
+    levels simultaneously: individual project execution, and programme-wide health across all areas.
+  </p>
+  <p>
+    On a fulfillment operation, portfolios typically align to the main process lanes: Outbound (Pick, Pack, Despatch), Inbound and Stow, Quality and ICQA, Returns Processing, and Safety and Environment. Portfolios are defined to match how the site is actually structured operationally.
+</p>
+
+  <h3>Portfolio Structure</h3>
+  <div class="vflow">
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#0F172A;color:#fff;border-color:#F97316;">
+        <strong style="color:#F97316;">CI Programme</strong> — the full portfolio of all operational improvement activity on site
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#EFF6FF;border-color:#1D4ED8;color:#1e3a8a;">
+        <strong>Portfolio A</strong> — Outbound (Pick, Pack &amp; Despatch) &nbsp;|&nbsp; 3 active projects · 4 ideas in pipeline
+      </div>
+    </div>
+    <div class="vflow-row" style="margin-top:6px;">
+      <div class="vflow-box" style="background:#EFF6FF;border-color:#1D4ED8;color:#1e3a8a;">
+        <strong>Portfolio B</strong> — e.g. Inbound &amp; Stow &nbsp;|&nbsp; 2 active projects · 2 ideas in pipeline
+      </div>
+    </div>
+    <div class="vflow-row" style="margin-top:6px;">
+      <div class="vflow-box" style="background:#EFF6FF;border-color:#1D4ED8;color:#1e3a8a;">
+        <strong>Portfolio C</strong> — Quality, ICQA &amp; Returns &nbsp;|&nbsp; 1 active project · 1 idea in pipeline
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#DCFCE7;border-color:#16a34a;color:#14532d;">
+        <strong>Individual Projects</strong> — each sits inside a portfolio, tracked through DMAIC stages in Continuum
+      </div>
+    </div>
+  </div>
+
+  <h3>Managing the Portfolio View</h3>
+  <p>Continuum shows a funnel summary for each portfolio: how many ideas are at each pipeline stage, how many projects are active and how many have been completed. This gives an instant programme health view.</p>
+  <table>
+    <thead><tr><th>Portfolio Column</th><th>What It Tracks</th><th>Why It Matters</th></tr></thead>
+    <tbody>
+      <tr><td class="td-label">Ideas</td><td>Raw ideas raised against this portfolio</td><td>Input volume — is the area being actively observed?</td></tr>
+      <tr><td class="td-label">Definition</td><td>Ideas with a written problem statement and metric</td><td>Work in progress in the pipeline</td></tr>
+      <tr><td class="td-label">Validation</td><td>Ideas being reviewed for project approval</td><td>Governance checkpoint — is the funnel flowing?</td></tr>
+      <tr><td class="td-label">Active</td><td>Live projects currently in DMAIC stages</td><td>Delivery capacity — how much is in flight?</td></tr>
+      <tr><td class="td-label">Complete</td><td>Projects closed with verified results</td><td>Outcomes — the CI programme's evidence of impact</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Portfolio Governance</h3>
+  <ul>
+    <li>Each portfolio should have at least one idea progressing through the pipeline at any given time</li>
+    <li>No more than 4–5 active projects running simultaneously is recommended for a single CI Specialist — quality of execution matters more than volume</li>
+    <li>Portfolios are reviewed monthly at minimum — more frequently if an area is under performance pressure</li>
+    <li>Closed projects are retained in Continuum permanently — they form the CI programme's evidence base</li>
+  </ul>
+
+  <div class="callout callout-green">
+    <strong>Portfolio balance:</strong> A healthy programme does not concentrate all effort in one area. Each active portfolio should have at least one project progressing and one idea in the pipeline — spread of coverage demonstrates CI breadth, not just depth.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 5 — PROJECT TYPES
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-header">
+    <div class="sec-num">Section 05</div>
+    <h2>Project Types &amp; Complexity</h2>
+    <div class="sec-sub">Matching the right methodology to the size and complexity of the problem</div>
+  </div>
+
+  <h3>Overview — Five Project Types</h3>
+  <p>
+    Not every problem requires a full DMAIC project. Applying the correct level of rigour to the right
+    problem is itself a sign of CI maturity. Overcomplicating a simple issue wastes time; underplanning
+    a complex one leads to recurrence. The five types below represent a spectrum from fast action to
+    full six-sigma rigour.
+  </p>
+
+  <div class="project-cards">
+    <div class="project-card pc-qw">
+      <span class="badge badge-qw">Quick Win</span>
+      <h4>Quick Win</h4>
+      <p>A clearly understood problem with an obvious, low-risk fix. Can be implemented and measured within days to a few weeks.</p>
+      <div class="card-meta">Typical duration: 1–4 weeks · No formal charter required · Low statistical rigour</div>
+    </div>
+    <div class="project-card pc-yb">
+      <span class="badge badge-yb">Yellow Belt</span>
+      <h4>Yellow Belt</h4>
+      <p>A focused, area-level improvement using basic CI tools. Data is collected and analysed. A fix is trialled and measured before implementation.</p>
+      <div class="card-meta">Typical duration: 4–8 weeks · Charter required · Basic data analysis</div>
+    </div>
+    <div class="project-card pc-gb">
+      <span class="badge badge-gb">Green Belt</span>
+      <h4>Green Belt</h4>
+      <p>Full DMAIC methodology with structured root cause analysis, hypothesis testing and statistical validation. Delivers significant, cross-functional improvement.</p>
+      <div class="card-meta">Typical duration: 8–16 weeks · Full charter · Statistical tools required</div>
+    </div>
+    <div class="project-card pc-bb">
+      <span class="badge badge-bb">Black Belt</span>
+      <h4>Black Belt</h4>
+      <p>Complex, high-impact, cross-functional or multi-site problem. Advanced statistical analysis, DOE and process capability studies. Usually involves multiple workstreams.</p>
+      <div class="card-meta">Typical duration: 3–6 months · Sponsor required · Advanced tools</div>
+    </div>
+  </div>
+  <div style="margin-top:12px;">
+    <div class="project-card pc-inv" style="border-top-width:4px;">
+      <span class="badge badge-inv">Investigation</span>
+      <h4>Investigation</h4>
+      <p>A scoping exercise triggered by a spike, complaint or near miss. The goal is to understand what is happening and either resolve it quickly or escalate to a formal project. Investigations are time-boxed and output-driven.</p>
+      <div class="card-meta">Typical duration: 1–3 weeks · Brief scoping document · Outputs: root cause summary + recommendation</div>
+    </div>
+  </div>
+
+  <h3>Process Map — Quick Win</h3>
+  <div class="pmap">
+    <div class="pmap-title">Quick Win — Simplified Flow</div>
+    <div class="flow">
+      <div class="flow-step col-orange"><span class="step-num">01</span>Define Problem &amp; Fix</div>
+      <div class="flow-step col-improve"><span class="step-num">02</span>Implement Solution</div>
+      <div class="flow-step col-control"><span class="step-num">03</span>Measure &amp; Confirm</div>
+      <div class="flow-step col-closed"><span class="step-num">04</span>Document &amp; Close</div>
+    </div>
+    <p style="font-size:9pt;color:#6B7280;margin-top:10px;">
+      <strong>Stage 01:</strong> Write a 1-line problem statement and agree the fix with the operational TL.
+      <strong>Stage 02:</strong> Implement immediately — physical changes, schedule adjustments, process tweaks.
+      <strong>Stage 03:</strong> Collect 1–2 weeks of post-fix data to confirm the improvement is real and sustained.
+      <strong>Stage 04:</strong> Document the result, write a brief SOP if the fix changes a process, close in Continuum.
+    </p>
+  </div>
+
+  <h3>Process Map — Yellow Belt</h3>
+  <div class="pmap">
+    <div class="pmap-title">Yellow Belt — Flow</div>
+    <div class="flow">
+      <div class="flow-step col-orange"><span class="step-num">01</span>Charter &amp; Scope</div>
+      <div class="flow-step col-define"><span class="step-num">02</span>Map Current State</div>
+      <div class="flow-step col-measure"><span class="step-num">03</span>Baseline &amp; Pareto</div>
+      <div class="flow-step col-analyse"><span class="step-num">04</span>5-Why / Fishbone</div>
+      <div class="flow-step col-improve"><span class="step-num">05</span>Trial Fix</div>
+      <div class="flow-step col-control"><span class="step-num">06</span>Validate &amp; SOP</div>
+      <div class="flow-step col-closed"><span class="step-num">07</span>Close</div>
+    </div>
+  </div>
+
+  <h3>Process Map — Investigation</h3>
+  <div class="pmap">
+    <div class="pmap-title">Investigation — Flow</div>
+    <div class="flow">
+      <div class="flow-step col-orange"><span class="step-num">01</span>Trigger &amp; Scope</div>
+      <div class="flow-step col-define"><span class="step-num">02</span>Data Pull &amp; Review</div>
+      <div class="flow-step col-measure"><span class="step-num">03</span>Observe Process</div>
+      <div class="flow-step col-analyse"><span class="step-num">04</span>Root Cause Summary</div>
+      <div class="flow-step col-closed"><span class="step-num">05</span>Recommend &amp; Escalate</div>
+    </div>
+    <p style="font-size:9pt;color:#6B7280;margin-top:10px;">
+      Output is a brief written summary: what was found, likely root cause, and a recommendation — either close (if resolved by immediate action) or escalate to a Yellow Belt / Green Belt project.
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 6 — DMAIC STAGE BY STAGE
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-header">
+    <div class="sec-num">Section 06</div>
+    <h2>DMAIC — Stage by Stage</h2>
+    <div class="sec-sub">Define · Measure · Analyse · Improve · Control — tools, deliverables and stage gates at each phase</div>
+  </div>
+
+  <h3>Green Belt / Black Belt — Full DMAIC Process Map</h3>
+  <div class="pmap">
+    <div class="pmap-title">Full DMAIC Flow — Green Belt and Above</div>
+    <div class="flow">
+      <div class="flow-step col-define"><span class="step-num">D</span>DEFINE</div>
+      <div class="flow-step col-measure"><span class="step-num">M</span>MEASURE</div>
+      <div class="flow-step col-analyse"><span class="step-num">A</span>ANALYSE</div>
+      <div class="flow-step col-improve"><span class="step-num">I</span>IMPROVE</div>
+      <div class="flow-step col-control"><span class="step-num">C</span>CONTROL</div>
+      <div class="flow-step col-closed"><span class="step-num">✓</span>CLOSE</div>
+    </div>
+  </div>
+
+  <div class="dmaic-block no-break">
+    <div class="dmaic-header" style="background:#1D4ED8;">
+      <span class="stage-lbl">DEFINE</span>
+      <span class="stage-desc">Establish the problem, scope, team and measurable target before any analysis begins</span>
+    </div>
+    <div class="dmaic-body">
+      <div class="dmaic-col">
+        <h5>Key Tools</h5>
+        <ul>
+          <li>Project Charter</li>
+          <li>SIPOC diagram</li>
+          <li>Voice of Customer (VOC)</li>
+          <li>Problem statement</li>
+          <li>In / out of scope</li>
+          <li>Stakeholder map</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Deliverables</h5>
+        <ul>
+          <li>Signed-off project charter</li>
+          <li>Agreed baseline metric</li>
+          <li>Agreed improvement target</li>
+          <li>SIPOC completed</li>
+          <li>Project team identified</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Stage Gate — must have</h5>
+        <ul>
+          <li>Charter reviewed by sponsor</li>
+          <li>Problem statement is specific and measurable</li>
+          <li>Baseline data exists or a plan to collect it</li>
+          <li>Scope is realistic for timeframe</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="dmaic-block no-break">
+    <div class="dmaic-header" style="background:#6D28D9;">
+      <span class="stage-lbl">MEASURE</span>
+      <span class="stage-desc">Quantify the current state — establish a reliable baseline before chasing root causes</span>
+    </div>
+    <div class="dmaic-body">
+      <div class="dmaic-col">
+        <h5>Key Tools</h5>
+        <ul>
+          <li>Data collection plan</li>
+          <li>Process capability study</li>
+          <li>Measurement System Analysis (MSA)</li>
+          <li>Run charts / time series</li>
+          <li>FMEA (basic)</li>
+          <li>Value stream mapping</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Deliverables</h5>
+        <ul>
+          <li>Validated baseline figure (n ≥ 30 recommended)</li>
+          <li>Process capability confirmed</li>
+          <li>Measurement system verified (MSA)</li>
+          <li>Stratified data by shift, zone, operator</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Stage Gate — must have</h5>
+        <ul>
+          <li>Baseline is statistically valid</li>
+          <li>Measurement system is reliable (Gauge R&amp;R if applicable)</li>
+          <li>Data is stratified — pattern is visible</li>
+          <li>No root causes assumed yet</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="dmaic-block no-break">
+    <div class="dmaic-header" style="background:#B45309;">
+      <span class="stage-lbl">ANALYSE</span>
+      <span class="stage-desc">Find the verified root cause — not the symptom, not the first guess</span>
+    </div>
+    <div class="dmaic-body">
+      <div class="dmaic-col">
+        <h5>Key Tools</h5>
+        <ul>
+          <li>5-Why analysis</li>
+          <li>Fishbone (Ishikawa)</li>
+          <li>Pareto chart</li>
+          <li>Hypothesis testing (t-test, ANOVA)</li>
+          <li>Correlation &amp; regression</li>
+          <li>Waste walk observations</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Deliverables</h5>
+        <ul>
+          <li>Verified root cause(s) — data confirmed</li>
+          <li>Root cause linked directly to the metric gap</li>
+          <li>Vital few Xs identified (Pareto)</li>
+          <li>Counter-measure options defined</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Stage Gate — must have</h5>
+        <ul>
+          <li>Root cause is data-confirmed, not assumed</li>
+          <li>If removed, root cause would close the gap</li>
+          <li>Counter-measures address root cause, not symptoms</li>
+          <li>Risk of counter-measures assessed</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="dmaic-block no-break">
+    <div class="dmaic-header" style="background:#059669;">
+      <span class="stage-lbl">IMPROVE</span>
+      <span class="stage-desc">Design, pilot and validate the solution before full roll-out</span>
+    </div>
+    <div class="dmaic-body">
+      <div class="dmaic-col">
+        <h5>Key Tools</h5>
+        <ul>
+          <li>Solution selection matrix</li>
+          <li>Pilot plan</li>
+          <li>Design of Experiments (DOE)</li>
+          <li>Poka-yoke / error-proofing</li>
+          <li>Future state process map</li>
+          <li>Stakeholder engagement plan</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Deliverables</h5>
+        <ul>
+          <li>Pilot results — with statistical validation</li>
+          <li>Improvement confirmed against baseline</li>
+          <li>Roll-out plan agreed</li>
+          <li>Risk mitigation in place</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Stage Gate — must have</h5>
+        <ul>
+          <li>Pilot data shows statistically significant improvement</li>
+          <li>Sample size sufficient (n ≥ 30 post-pilot)</li>
+          <li>Roll-out risk assessed</li>
+          <li>Operational team briefed and ready</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="dmaic-block no-break">
+    <div class="dmaic-header" style="background:#0E7490;">
+      <span class="stage-lbl">CONTROL</span>
+      <span class="stage-desc">Lock in the gain — ensure the improvement sustains without the project team present</span>
+    </div>
+    <div class="dmaic-body">
+      <div class="dmaic-col">
+        <h5>Key Tools</h5>
+        <ul>
+          <li>Statistical Process Control (SPC)</li>
+          <li>Control chart (X-bar, P-chart, etc.)</li>
+          <li>SOP / standard work document</li>
+          <li>Control plan</li>
+          <li>Training and briefing records</li>
+          <li>Response plan (if control chart signals)</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Deliverables</h5>
+        <ul>
+          <li>SOP written and issued to TLs</li>
+          <li>Control chart live and owner assigned</li>
+          <li>Team briefed and signed off</li>
+          <li>4-week sustained result confirmed</li>
+          <li>Handover to operations complete</li>
+        </ul>
+      </div>
+      <div class="dmaic-col">
+        <h5>Stage Gate — must have</h5>
+        <ul>
+          <li>Result sustained for minimum 4 weeks post-implementation</li>
+          <li>SOP exists and operational team owns it</li>
+          <li>Control mechanism in place — not just hope</li>
+          <li>Before/after result documented in Continuum</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout callout-green" style="margin-top:16px;">
+    <strong>Close criteria:</strong> A project is only closed in Continuum once Control stage gate criteria are fully met — sustained result, SOP issued, team briefed, benefit quantified. Closing early undermines the programme's evidence base.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 7 — KPI TRACKING & DATA ANALYSIS
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-header">
+    <div class="sec-num">Section 07</div>
+    <h2>KPI Tracking &amp; Data Analysis</h2>
+    <div class="sec-sub">How performance data is captured, monitored and turned into actionable insight</div>
+  </div>
+
+  <h3>The Purpose of KPI Tracking</h3>
+  <p>
+    KPI tracking in a CI programme serves two distinct purposes. The first is operational: knowing where
+    performance stands right now relative to target. The second is analytical: building a trend history
+    that reveals patterns, shift-point changes and signals that would be invisible from a single data
+    point. Both matter equally.
+  </p>
+  <p>
+    Logging performance data into Continuum daily creates a structured time-series record for every
+    tracked metric. This data feeds the Excel report, informs project baselines, and — over time —
+    demonstrates the CI programme's impact through measurable before-and-after trend shifts.
+  </p>
+
+  <h3>Daily KPI Logging Workflow</h3>
+  <div class="pmap">
+    <div class="pmap-title">KPI Logging — Daily Cycle</div>
+    <div class="flow">
+      <div class="flow-step col-orange"><span class="step-num">01</span>Pull Today's Data</div>
+      <div class="flow-step col-define"><span class="step-num">02</span>Enter in Continuum</div>
+      <div class="flow-step col-measure"><span class="step-num">03</span>RAG Status Updates</div>
+      <div class="flow-step col-analyse"><span class="step-num">04</span>Check for Signals</div>
+      <div class="flow-step col-improve"><span class="step-num">05</span>Action if Needed</div>
+      <div class="flow-step col-closed"><span class="step-num">06</span>Log Complete</div>
+    </div>
+  </div>
+
+  <h3>RAG Status — Red / Amber / Green</h3>
+  <p>Each metric is assessed against its target using a RAG (Red / Amber / Green) framework. RAG provides an at-a-glance health check that can be communicated to any stakeholder without requiring them to understand the raw numbers.</p>
+  <table>
+    <thead><tr><th>Status</th><th>Threshold</th><th>Meaning</th><th>Expected Response</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="td-tag" style="background:#DCFCE7;color:#166534;">● GREEN</span></td>
+        <td>≥ 100% of target</td>
+        <td>On or above target — performing as required</td>
+        <td>Sustain and monitor. Document in activity log.</td>
+      </tr>
+      <tr>
+        <td><span class="td-tag" style="background:#FEF9C3;color:#854D0E;">◐ AMBER</span></td>
+        <td>95%–99% of target</td>
+        <td>Close to target but not there — risk of decline</td>
+        <td>Investigate cause, initiate corrective action. Review within the week.</td>
+      </tr>
+      <tr>
+        <td><span class="td-tag" style="background:#FEE2E2;color:#991B1B;">○ RED</span></td>
+        <td>&lt; 95% of target</td>
+        <td>Significantly off target — action required</td>
+        <td>Immediate root cause investigation. Escalate to site manager if sustained.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Trend Analysis</h3>
+  <p>
+    A single data point tells you where you are today. A trend tells you where you are going. Continuum
+    builds a 90-day trend view for each metric, allowing the CI Specialist to identify:
+  </p>
+  <ul>
+    <li><strong>Improving trend</strong> — performance moving consistently toward or beyond target. Evidence of CI impact.</li>
+    <li><strong>Declining trend</strong> — performance moving away from target. Requires a project or investigation to understand root cause.</li>
+    <li><strong>Flat trend with occasional spikes</strong> — likely a process stability issue. SPC may be appropriate.</li>
+    <li><strong>Step change improvement</strong> — a clear shift point following a project intervention. Document this — it is your strongest evidence of impact.</li>
+  </ul>
+
+  <h3>Statistical Process Control (SPC) Signals</h3>
+  <p>
+    SPC is used to distinguish between normal process variation (common cause) and abnormal, assignable
+    events (special cause). When SPC signals are present, they indicate something has genuinely changed
+    in the process — good or bad — and requires investigation.
+  </p>
+
+  <div class="two-col">
+    <div class="callout callout-amber">
+      <strong>Common SPC signals to track:</strong>
+      <ul style="margin-top:6px;">
+        <li>Single point beyond 3σ control limit</li>
+        <li>8 consecutive points on same side of mean</li>
+        <li>6 consecutive points trending in one direction</li>
+        <li>2 of 3 consecutive points beyond 2σ</li>
+      </ul>
+    </div>
+    <div class="callout callout-blue">
+      <strong>When a signal fires:</strong>
+      <ul style="margin-top:6px;">
+        <li>Do not adjust the process without investigation</li>
+        <li>Identify what changed at the signal point</li>
+        <li>Document the investigation in Continuum</li>
+        <li>Take assignable cause action or confirm improvement</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Week-by-Week Comparison</h3>
+  <p>
+    Beyond daily logging and 90-day trends, a weekly comparison view highlights short-term performance
+    shifts. Comparing this week's average against last week's average — and both against the target —
+    gives the CI Specialist and site leadership a quick performance pulse without needing to interpret
+    a full trend chart.
+  </p>
+  <p>This week-by-week view is included automatically in the Continuum Excel report and updated on every sync.</p>
+
+  <h3>Using Data in Projects</h3>
+  <table>
+    <thead><tr><th>DMAIC Stage</th><th>How KPI Data Is Used</th></tr></thead>
+    <tbody>
+      <tr><td class="td-label">Define</td><td>Identify the metric that reflects the problem; confirm the baseline value and set a target</td></tr>
+      <tr><td class="td-label">Measure</td><td>Validate the baseline with sufficient data points; stratify by shift, zone, operator to find patterns</td></tr>
+      <tr><td class="td-label">Analyse</td><td>Run charts and Pareto to identify where and when the problem is worst; confirm root cause with data</td></tr>
+      <tr><td class="td-label">Improve</td><td>Compare post-pilot data to baseline; use statistical tests to confirm improvement is real, not random</td></tr>
+      <tr><td class="td-label">Control</td><td>Track the metric post-implementation; use SPC to confirm stability; document the before/after result</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 8 — REPORTING & STAKEHOLDER VISIBILITY
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-header">
+    <div class="sec-num">Section 08</div>
+    <h2>Reporting &amp; Stakeholder Visibility</h2>
+    <div class="sec-sub">How CI programme data reaches site leadership, managers and wider stakeholders</div>
+  </div>
+
+  <h3>Reporting Philosophy</h3>
+  <p>
+    The CI Specialist generates and owns the reporting. Stakeholders should never need to chase for
+    a CI update — the data should be available, up to date and easy to interpret without requiring
+    a walkthrough. The reporting framework is built around two layers: the live Continuum system
+    (for the CI Specialist's own management) and the Excel report (for stakeholder consumption).
+  </p>
+
+  <div class="highlight-box">
+    <strong>The principle:</strong>
+    <p>If it isn't written down, it didn't happen. Every project, every data point, every observation exists in Continuum. The Excel report is the clean, shareable output of that work — not a separate system, but a live reflection of it.</p>
+  </div>
+
+  <h3>The Excel CI Report</h3>
+  <p>
+    The Continuum Excel report is a professionally formatted, automatically generated workbook that
+    captures the full programme at a point in time. It is produced by syncing Continuum with a single
+    click and can be shared with any stakeholder without requiring them to access the system.
+  </p>
+
+  <table>
+    <thead><tr><th>Sheet</th><th>Contents</th><th>Primary Audience</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="td-label">Overview</td>
+        <td>Programme headline numbers — active projects, completions, actions closed, SOPs, maturity score</td>
+        <td>GM, Site Manager, senior stakeholder</td>
+      </tr>
+      <tr>
+        <td class="td-label">CI Impact</td>
+        <td>Before vs after results for all completed projects — baseline, achieved, % improvement, estimated benefit. Active projects with stage and expected benefit.</td>
+        <td>GM, Operations Manager, HR (performance evidence)</td>
+      </tr>
+      <tr>
+        <td class="td-label">KPIs</td>
+        <td>Week-by-week comparison, RAG status, 90-day trend data for all tracked metrics</td>
+        <td>Site Manager, Operations, Finance</td>
+      </tr>
+      <tr>
+        <td class="td-label">Projects</td>
+        <td>Full project register — all projects, belt type, portfolio, DMAIC stage, health status, problem statement, last updated</td>
+        <td>Operations Manager, CI leadership</td>
+      </tr>
+      <tr>
+        <td class="td-label">Pipeline</td>
+        <td>Idea funnel by portfolio — how many ideas are at each stage across each operational area</td>
+        <td>Site Manager, Portfolio owners</td>
+      </tr>
+      <tr>
+        <td class="td-label">Activity Log</td>
+        <td>Full chronological audit trail — every KPI logged, project updated, observation recorded and idea raised</td>
+        <td>CI Specialist (self-audit), HR (evidence of daily practice)</td>
+      </tr>
+      <tr>
+        <td class="td-label">Maturity</td>
+        <td>CI maturity scores across 5 dimensions with current level, visual indicator and specific next-step actions to reach the next level</td>
+        <td>CI Specialist, site leadership, CI programme sponsor</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Report Generation Workflow</h3>
+  <div class="pmap">
+    <div class="pmap-title">Excel Report — Generation and Distribution Flow</div>
+    <div class="flow">
+      <div class="flow-step col-orange"><span class="step-num">01</span>Daily data entry in Continuum</div>
+      <div class="flow-step col-define"><span class="step-num">02</span>Sync triggered (auto at 07:00 or manual)</div>
+      <div class="flow-step col-measure"><span class="step-num">03</span>Excel workbook generated</div>
+      <div class="flow-step col-improve"><span class="step-num">04</span>Saved to OneDrive (if configured)</div>
+      <div class="flow-step col-closed"><span class="step-num">05</span>Available for stakeholder review</div>
+    </div>
+  </div>
+
+  <h3>Stakeholder Engagement Cadence</h3>
+  <table>
+    <thead><tr><th>Stakeholder</th><th>Frequency</th><th>What They See</th><th>Format</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="td-label">General Manager</td>
+        <td>Monthly</td>
+        <td>Programme headline numbers, CI Impact sheet, key wins and risks</td>
+        <td>Excel report + verbal brief (5 minutes max)</td>
+      </tr>
+      <tr>
+        <td class="td-label">Operations Manager</td>
+        <td>Weekly</td>
+        <td>KPI RAG status, active projects, any stalled items</td>
+        <td>Excel report — KPIs and Projects sheets</td>
+      </tr>
+      <tr>
+        <td class="td-label">Team Leaders</td>
+        <td>As needed</td>
+        <td>Projects relevant to their area, actions they own, SOP changes</td>
+        <td>Verbal briefing supported by project extract</td>
+      </tr>
+      <tr>
+        <td class="td-label">HR / L&amp;D</td>
+        <td>Quarterly / review cycle</td>
+        <td>Activity log (evidence of daily CI practice), CI Impact sheet, maturity scores</td>
+        <td>Excel report — full workbook</td>
+      </tr>
+      <tr>
+        <td class="td-label">Regional CI / Programme</td>
+        <td>Monthly / upon request</td>
+        <td>Full programme summary — portfolios, projects, pipeline, maturity</td>
+        <td>Full Excel report</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-green">
+    <strong>Evidence principle:</strong> The Activity Log sheet is the most underrated part of the report. It is a timestamped, chronological record of every action taken in the CI programme. For performance reviews, it demonstrates that CI is a daily practice — not a quarterly effort. Keep it current.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SECTION 9 — CONTINUUM END-TO-END
+════════════════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-header">
+    <div class="sec-num">Section 09</div>
+    <h2>Continuum — End-to-End System Overview</h2>
+    <div class="sec-sub">How all workflows connect inside the platform — a single source of truth for the CI programme</div>
+  </div>
+
+  <h3>What Continuum Is</h3>
+  <p>
+    Continuum is a purpose-built CI management platform designed for site-based CI Specialists. It
+    replaces disconnected spreadsheets, notebook logs and email chains with a single, structured
+    system that connects observations, ideas, projects, KPIs and reporting into one coherent record.
+  </p>
+  <p>
+    It is used exclusively by the CI Specialist — not by the wider operational team — which means data
+    quality is controlled, the record is consistent, and the system reflects exactly what is happening
+    with the CI programme at any given moment.
+  </p>
+
+  <h3>End-to-End Data Flow</h3>
+  <div class="vflow">
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#0F172A;color:#fff;border-color:#F97316;">
+        <strong style="color:#F97316;">Floor Walk</strong> — CI Specialist observes process, identifies waste, deviation or opportunity
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#FEF9C3;border-color:#d97706;color:#78350f;">
+        <strong>Observation Logged</strong> — waste type, area, date, estimated impact entered in Continuum Observations
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#DBEAFE;border-color:#1D4ED8;color:#1e3a8a;">
+        <strong>Idea Raised</strong> — observation converted to an idea in the pipeline; problem statement drafted, portfolio assigned
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#EDE9FE;border-color:#6D28D9;color:#4C1D95;">
+        <strong>Pipeline Progression</strong> — idea moves through Definition → Validation in Continuum; scored, scoped, validated
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#DCFCE7;border-color:#16a34a;color:#14532d;">
+        <strong>Project Created</strong> — validated idea becomes a live project in Continuum; charter, metric, stage gate tracking begins
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#EFF6FF;border-color:#1D4ED8;color:#1e3a8a;">
+        <strong>DMAIC Progression</strong> — project moves through Define → Measure → Analyse → Improve → Control in Continuum; actions logged at each stage
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#DCFCE7;border-color:#16a34a;color:#14532d;">
+        <strong>Project Closed</strong> — sustained result confirmed, SOP issued, before/after result documented, benefit quantified in Continuum charter
+      </div>
+    </div>
+    <div class="vflow-arrow">↓</div>
+    <div class="vflow-row">
+      <div class="vflow-box" style="background:#0F172A;color:#fff;border-color:#F97316;">
+        <strong style="color:#F97316;">Excel Report Synced</strong> — all data flows into the Excel workbook. CI Impact, KPIs, Projects, Pipeline, Activity and Maturity sheets updated automatically
+      </div>
+    </div>
+  </div>
+
+  <h3>Continuum Module Summary</h3>
+  <table>
+    <thead><tr><th>Module</th><th>What It Manages</th><th>Daily / Weekly Use</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="td-label">Dashboard</td>
+        <td>Programme headline — active projects, pipeline health, KPI RAG, recent activity, maturity score</td>
+        <td>First screen each day — quick programme health check</td>
+      </tr>
+      <tr>
+        <td class="td-label">Observations</td>
+        <td>Floor observation log — date, area, waste type, description, impact estimate</td>
+        <td>Daily — log observations from each floor walk</td>
+      </tr>
+      <tr>
+        <td class="td-label">Ideas &amp; Pipeline</td>
+        <td>Idea pipeline — four stages from raw idea to validated project. Scoring, problem statements, portfolio links</td>
+        <td>Weekly — review and progress ideas through pipeline stages</td>
+      </tr>
+      <tr>
+        <td class="td-label">Portfolios</td>
+        <td>Portfolio funnel view — ideas and projects organised by operational area. Pipeline count at each stage.</td>
+        <td>Weekly — check portfolio balance and coverage</td>
+      </tr>
+      <tr>
+        <td class="td-label">Projects</td>
+        <td>Full project register — charter, actions, stage, DMAIC progress, problem statement, baseline, target, SOP, benefit</td>
+        <td>Daily — update actions, progress stages, log changes</td>
+      </tr>
+      <tr>
+        <td class="td-label">KPIs</td>
+        <td>Metric logging — daily data entry, 90-day trend charts, RAG status, SPC signal flags, week-on-week comparison</td>
+        <td>Daily — enter today's performance data</td>
+      </tr>
+      <tr>
+        <td class="td-label">Maturity</td>
+        <td>Self-assessment across 5 CI dimensions — 5S, DMAIC, Standard Work, Visual Management, Problem Solving. Score history tracked.</td>
+        <td>Monthly — honest self-assessment against criteria</td>
+      </tr>
+      <tr>
+        <td class="td-label">Reports</td>
+        <td>Excel sync control — trigger manual sync, configure OneDrive export, view last sync status</td>
+        <td>Weekly — verify sync has run, check report is current</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>The Single Source of Truth Principle</h3>
+  <div class="callout callout-navy">
+    <strong>One system. One record.</strong> Every observation, idea, project update, KPI entry and SOP reference lives in Continuum. The Excel report is a read-only output — nothing is ever entered directly into the Excel file. This ensures the data is always consistent, always traceable, and always audit-ready. The Excel file can be regenerated at any time from the Continuum data — the system is the record of truth, the spreadsheet is the communication tool.
+  </div>
+
+  <hr class="divider"/>
+
+  <h3>Summary — The CI Specialist Operating Model</h3>
+  <p>
+    The workflow described in this document is not a project management system bolted onto an operations
+    role — it is the operating model of the role itself. Observations are not optional. Data is not
+    collected occasionally. Projects are not started without a problem statement. SOPs are not skipped
+    because a project has gone well.
+  </p>
+  <p>
+    Every element of this framework is connected: observations feed the pipeline, the pipeline feeds
+    projects, projects feed the KPI trends, and the trends feed the reporting that demonstrates
+    programme impact to leadership. Continuum holds the record. The Excel report communicates it.
+    The CI Specialist drives all of it.
+  </p>
+
+  <div class="highlight-box" style="margin-top:24px;">
+    <strong>The measure of a CI programme is not how many projects are running — it is how many problems have been permanently solved.</strong>
+    <p>Projects are started to close gaps. They are not open indefinitely. They are not stalled quietly. They deliver a verified, sustained result — and then they close. That result lives in the CI Impact register, supported by the data, and it does not go away.</p>
+  </div>
+
+  <div style="margin-top:40px; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:flex-end;">
+    <div>
+      <div style="font-size:8.5pt;color:#94A3B8;">Continuum CI — Master Workflow Guide</div>
+      <div style="font-size:8.5pt;color:#94A3B8;">Version 1.0 · 2026 · Confidential — Internal Reference</div>
+    </div>
+    <div style="font-size:18pt;font-weight:800;color:var(--orange);">continuum<span style="color:var(--navy);">CI</span></div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+{
+  "name": "continuum-app",
+  "version": "1.0.0",
+  "description": "CI Management Platform for Amazon FC",
+  "type": "module",
+  "scripts": {
+    "start": "concurrently --names \"SERVER,CLIENT\" --prefix-colors \"yellow,cyan\" \"node server/index.js\" \"vite --port 3000\"",
+    "dev": "concurrently --names \"SERVER,CLIENT\" --prefix-colors \"yellow,cyan\" \"nodemon server/index.js\" \"vite --port 3000\"",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.37.0",
+    "@dagrejs/dagre": "^3.0.0",
+    "@xyflow/react": "^12.4.4",
+    "claude-flow": "^3.5.80",
+    "concurrently": "^9.1.2",
+    "cors": "^2.8.5",
+    "docx": "^9.5.0",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.2",
+    "lucide-react": "^1.8.0",
+    "mermaid": "^11.4.1",
+    "node-cron": "^3.0.3",
+    "node-notifier": "^10.0.1",
+    "pg": "^8.13.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.15.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "nodemon": "^3.1.9",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.0.11"
+  }
+}
