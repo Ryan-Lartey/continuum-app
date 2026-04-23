@@ -1034,13 +1034,25 @@ export default function ReportsView({ onOpenAgent, onNavigate, demoMode }) {
             <span style={{ marginLeft: 8, opacity: 0.6 }}>· Auto-syncs daily at 7:00 AM</span>
           </div>
 
-          <button onClick={handleSync} disabled={syncing} style={{
-            width: '100%', padding: '7px 0', borderRadius: 8, border: 'none', cursor: syncing ? 'not-allowed' : 'pointer',
-            background: syncing ? 'var(--bg-input)' : '#217346', color: syncing ? 'var(--text-3)' : 'white',
-            fontSize: 12, fontWeight: 700, transition: 'all 0.15s'
-          }}>
-            {syncing ? 'Syncing...' : 'Sync Now →'}
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={handleSync} disabled={syncing} style={{
+              flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: syncing ? 'not-allowed' : 'pointer',
+              background: syncing ? 'var(--bg-input)' : '#217346', color: syncing ? 'var(--text-3)' : 'white',
+              fontSize: 12, fontWeight: 700, transition: 'all 0.15s'
+            }}>
+              {syncing ? 'Syncing...' : 'Sync Now →'}
+            </button>
+            <button
+              onClick={() => { window.location.href = '/api/sync/download' }}
+              title="Download Excel report"
+              style={{
+                padding: '7px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                background: 'rgba(33,115,70,0.12)', color: '#217346',
+                fontSize: 14, fontWeight: 700, transition: 'all 0.15s'
+              }}>
+              ⬇
+            </button>
+          </div>
 
           {showSyncConfig && (
             <div className="mt-3 space-y-2">

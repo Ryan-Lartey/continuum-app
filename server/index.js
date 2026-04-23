@@ -68,6 +68,23 @@ app.post('/api/sync/excel', async (req, res) => {
   }
 })
 
+app.get('/api/sync/download', async (req, res) => {
+  try {
+    const { generateExcelWorkbook } = await import('./services/excel.js')
+    const { buildSyncData } = await import('./services/sync.js')
+    const data = await buildSyncData()
+    const wb   = await generateExcelWorkbook(data)
+    const buf  = await wb.xlsx.writeBuffer()
+    const filename = `Continuum-CI-Report-${new Date().toISOString().slice(0,10)}.xlsx`
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.send(Buffer.from(buf))
+  } catch (err) {
+    console.error('[Download] Excel generation error:', err)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.get('/api/sync/status', async (req, res) => {
   try {
     const { rows } = await pool.query(`SELECT excel_config, last_excel_sync FROM site_profile WHERE id = 1`)
