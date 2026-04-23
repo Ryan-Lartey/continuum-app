@@ -172,7 +172,7 @@ function headerRow(ws, rowNum, labels, height = 20) {
 // SHEET 1 — OVERVIEW DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
 function buildOverview(ws, data) {
-  const siteName = data.siteName || 'BHX4 — Amazon FC'
+  const siteName = data.siteName || 'XSE6'
   const userName = data.userName || 'Ryan'
   const dateStr  = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
 
@@ -183,7 +183,7 @@ function buildOverview(ws, data) {
   setupPage(ws, 'Overview Dashboard', siteName)
   ws.views = [{ showGridLines: false }]
 
-  // ─ Title ─
+  // ─ Title banner ─
   ws.mergeCells('B1:G1')
   const t1 = ws.getCell('B1')
   t1.value = `◈  CI PROGRAMME — ${siteName.toUpperCase()}`
@@ -203,112 +203,82 @@ function buildOverview(ws, data) {
   ws.getCell('B2').fill = fill(C.hAccent)
   ws.getRow(2).height = 4
 
-  // ─ KPI TILES (4 tiles side by side, 2 per half) ─
-  sectionLabel(ws, 'B3:N3', '  KEY PERFORMANCE INDICATORS  ·  Current shift performance vs target')
+  // ─ WAREHOUSE HEALTH (top of page — the primary view) ─
+  sectionLabel(ws, 'B3:N3', '  WAREHOUSE HEALTH SCORES  ·  Most recent shift per section')
 
-  const metrics = [
-    { key:'uph',      label:'UPH',          unit:'',  hi:true,  tKey:'UPH' },
-    { key:'accuracy', label:'Pick Accuracy', unit:'%', hi:true,  tKey:'Accuracy' },
-    { key:'dpmo',     label:'DPMO',          unit:'',  hi:false, tKey:'DPMO' },
-    { key:'dts',      label:'DTS',           unit:'%', hi:true,  tKey:'DTS' },
+  const WH_SECTIONS = [
+    { id: 'inbound',  label: 'Inbound'  },
+    { id: 'icqa',     label: 'ICQA'     },
+    { id: 'pick',     label: 'Pick'     },
+    { id: 'pack',     label: 'Pack'     },
+    { id: 'outbound', label: 'Outbound' },
   ]
+  const whScoreMap = Object.fromEntries((data.warehouseHealth || []).map(r => [r.section_id, r]))
 
-  // Column groupings — B:F, G:H skipped (H=gap), I:M, N:N (second pair use I-N)
-  // Actually: left half = B-G cols 2-7, right half = I-N cols 9-14, H is gap
-  // Tile 1: B-C, Tile 2: E-F (D is center gap within left), Tile 3: I-J, Tile 4: L-M (K/L center gap)
-  // Simplify: just use 4 columns each 3 wide
-  // B,C,D = tile1; E,F,G = tile2; (H=gap); I,J,K = tile3; L,M,N = tile4
-  const tileCols = [
-    { s:'B', m:'C', e:'D' },
-    { s:'E', m:'F', e:'G' },
-    { s:'I', m:'J', e:'K' },
-    { s:'L', m:'M', e:'N' },
-  ]
+  function whBg(s)     { if (s == null) return C.gyBg; return s >= 85 ? C.gnBg : s >= 70 ? C.amBg : C.rdBg }
+  function whTx(s)     { if (s == null) return C.gyTx; return s >= 85 ? C.gnTx : s >= 70 ? C.amTx : C.rdTx }
+  function whStatus(s) { if (s == null) return 'No Data'; return s >= 85 ? '● Good' : s >= 70 ? '◐ At Risk' : '○ Critical' }
+  function whBar(s)    { if (s == null) return '—'; const f = Math.round((s / 100) * 10); return '█'.repeat(f) + '░'.repeat(10 - f) + `  ${s.toFixed(1)}%` }
 
-  metrics.forEach((m, idx) => {
-    const tc = tileCols[idx]
-    const latest = data.latestKpis?.[m.key]
-    const val    = latest?.value
-    const target = data.kpiTargets?.[m.tKey]
-    const bg     = ragBg(val, target, m.hi)
-    const tx     = ragTx(val, target, m.hi)
-    const status = ragStatus(val, target, m.hi)
-    const pct    = ragPct(val, target, m.hi)
-    const mData  = (data.kpiData||[]).filter(d=>d.metric_id===m.key).sort((a,b)=>a.date.localeCompare(b.date))
-    const vals   = mData.map(d=>d.value)
-    const trend  = trendLabel(vals, m.hi)
-    const tCol   = trendColor(vals, m.hi)
-    const mom    = momDelta(vals)
-    const momStr = mom!=null ? `MoM: ${parseFloat(mom)>0?'+':''}${mom}%` : ''
-
-    // Row 4 — metric label
-    ws.mergeCells(`${tc.s}4:${tc.e}4`)
-    const r4 = ws.getCell(`${tc.s}4`)
-    r4.value = m.label.toUpperCase()
-    r4.font  = { color: { argb: 'FF' + C.muteTx }, size: 8, bold: true, name: 'Calibri' }
-    r4.fill  = fill(C.row0)
-    r4.border = { top: thinBdr(C.bdr), left: thinBdr(C.bdr), right: thinBdr(C.bdr) }
-    r4.alignment = al('center', 'middle')
-    ws.getRow(4).height = 13
-
-    // Row 5 — BIG value
-    ws.mergeCells(`${tc.s}5:${tc.e}5`)
-    const r5 = ws.getCell(`${tc.s}5`)
-    r5.value = val != null ? val : '—'
-    r5.font  = { color: { argb: 'FF' + tx }, size: 32, bold: true, name: 'Calibri' }
-    r5.fill  = fill(bg)
-    r5.alignment = al('center', 'middle')
-    ws.getRow(5).height = 42
-
-    // Row 6 — target
-    ws.mergeCells(`${tc.s}6:${tc.e}6`)
-    const r6 = ws.getCell(`${tc.s}6`)
-    r6.value = `Target: ${target!=null?target:'—'}${m.unit}   ·   ${pct} of target`
-    r6.font  = { color: { argb: 'FF' + tx }, size: 8, name: 'Calibri' }
-    r6.fill  = fill(bg)
-    r6.alignment = al('center', 'middle')
-    ws.getRow(6).height = 14
-
-    // Row 7 — RAG status badge
-    ws.mergeCells(`${tc.s}7:${tc.e}7`)
-    const r7 = ws.getCell(`${tc.s}7`)
-    r7.value = status
-    r7.font  = { color: { argb: 'FF' + tx }, size: 9, bold: true, name: 'Calibri' }
-    r7.fill  = fill(bg)
-    r7.border = { bottom: thinBdr(C.bdr), left: thinBdr(C.bdr), right: thinBdr(C.bdr) }
-    r7.alignment = al('center', 'middle')
-    ws.getRow(7).height = 14
-
-    // Row 8 — trend + MoM
-    ws.mergeCells(`${tc.s}8:${tc.e}8`)
-    const r8 = ws.getCell(`${tc.s}8`)
-    r8.value = trend + (momStr ? `   ·   ${momStr}` : '')
-    r8.font  = { color: { argb: 'FF' + tCol }, size: 8, name: 'Calibri' }
-    r8.fill  = fill(C.row1)
-    r8.border = { bottom: thinBdr(C.bdr), left: thinBdr(C.bdr), right: thinBdr(C.bdr) }
-    r8.alignment = al('center', 'middle')
-    ws.getRow(8).height = 13
+  // Header row
+  ws.getRow(4).height = 18
+  ;['','SECTION','HEALTH SCORE','SCORE BAR (0–100%)','','STATUS','LAST SHIFT','SHIFT','','','','','',''].forEach((v, ci) => {
+    const cell = ws.getRow(4).getCell(ci + 1)
+    cell.value = v
+    cell.font  = font(C.hText, 9, true)
+    cell.fill  = fill(C.hNav)
+    cell.border = box(C.bdrH)
+    cell.alignment = al(ci === 2 || ci === 5 ? 'center' : 'left', 'middle')
   })
 
-  // Gap col H rows 4-8
-  for (let r = 4; r <= 8; r++) ws.getRow(r).getCell(8).fill = fill(C.row1)
+  WH_SECTIONS.forEach((sec, i) => {
+    const r   = 5 + i
+    const d   = whScoreMap[sec.id]
+    const scr = d?.score ?? null
+    const bg  = i % 2 === 0 ? C.row0 : C.row1
+    ws.getRow(r).height = 22
 
-  ws.getRow(9).height = 8
+    const vals = ['', sec.label, scr != null ? scr.toFixed(1) : '—', whBar(scr), '', whStatus(scr), d?.date || '—', d?.shift_type || '—', '', '', '', '', '', '']
+    vals.forEach((v, ci) => {
+      const cell = ws.getRow(r).getCell(ci + 1)
+      cell.value  = v
+      cell.border = box(C.bdr)
+      if (ci === 2 || ci === 5) {
+        cell.fill  = fill(whBg(scr))
+        cell.font  = { color: { argb: 'FF' + whTx(scr) }, size: ci === 2 ? 12 : 9, bold: true, name: 'Calibri' }
+        cell.alignment = al('center', 'middle')
+      } else if (ci === 3) {
+        cell.fill  = fill(bg)
+        cell.font  = { color: { argb: 'FF' + whTx(scr) }, size: 8, name: 'Courier New' }
+        cell.alignment = al('left', 'middle')
+      } else if (ci === 1) {
+        cell.fill  = fill(bg)
+        cell.font  = font(C.bodyTx, 10, true)
+        cell.alignment = al('left', 'middle')
+      } else {
+        cell.fill  = fill(bg)
+        cell.font  = font(C.muteTx, 9)
+        cell.alignment = al('center', 'middle')
+      }
+    })
+  })
 
-  // ─ PROGRAMME STATS ─
-  sectionLabel(ws, 'B10:G10', '  IMPROVEMENT PROGRAMME')
-  sectionLabel(ws, 'I10:N10', '  PIPELINE OVERVIEW')
+  ws.getRow(10).height = 8
+
+  // ─ PROGRAMME STATS + PIPELINE ─
+  sectionLabel(ws, 'B11:G11', '  IMPROVEMENT PROGRAMME')
+  sectionLabel(ws, 'I11:N11', '  PIPELINE OVERVIEW')
 
   const progStats = [
-    { label:'Active Projects',    value: data.activeProjects||0,              color: C.bGrn },
-    { label:'Completed Projects', value: data.closedProjects||0,              color: C.bQk  },
-    { label:'Total Ideas',        value: data.totalIdeas||0,                  color: 'D97706' },
-    { label:'Portfolios Managed', value: (data.portfolios||[]).length,         color: C.bBlk },
-    { label:'Actions Complete',   value: data.actionsComplete||0,             color: C.sImp },
-    { label:'SOPs Written',       value: data.sopCount||0,                    color: C.sCnt },
+    { label:'Active Projects',    value: data.activeProjects||0,          color: C.bGrn },
+    { label:'Completed Projects', value: data.closedProjects||0,          color: C.bQk  },
+    { label:'Total Ideas',        value: data.totalIdeas||0,              color: 'D97706' },
+    { label:'Portfolios Managed', value: (data.portfolios||[]).length,    color: C.bBlk },
+    { label:'Actions Complete',   value: data.actionsComplete||0,         color: C.sImp },
+    { label:'SOPs Written',       value: data.sopCount||0,                color: C.sCnt },
   ]
   const progColPairs = [['B','D'],['E','G'],['B','D'],['E','G'],['B','D'],['E','G']]
-  const progRows     = [11,11,13,13,15,15]
+  const progRows     = [12,12,14,14,16,16]
 
   progStats.forEach((s, i) => {
     const [c1,c2] = progColPairs[i]
@@ -333,29 +303,20 @@ function buildOverview(ws, data) {
     lblCell.alignment = al('center', 'middle')
   })
 
-  // Pipeline mini-table (right side)
-  const pipeHdrs = ['','PORTFOLIO','IDEAS','ACTIVE','DONE','']
-  headerRow(ws, 11, pipeHdrs, 18)
-  // Adjust header cells I-N
-  ;['I','J','K','L','M','N'].forEach((c,i) => {
-    const cell = ws.getRow(11).getCell(['I','J','K','L','M','N'].indexOf(c)+9)
-    cell.value = pipeHdrs[i]
-  })
-
-  const pipeCols = [9,10,11,12,13,14] // col numbers for I-N
+  // Pipeline mini-table
   ;['I','J','K','L','M','N'].forEach((col, ci) => {
-    const cell = ws.getRow(11).getCell(col === 'I' ? 9 : col === 'J' ? 10 : col === 'K' ? 11 : col === 'L' ? 12 : col === 'M' ? 13 : 14)
+    const cell = ws.getRow(12).getCell(col === 'I' ? 9 : col === 'J' ? 10 : col === 'K' ? 11 : col === 'L' ? 12 : col === 'M' ? 13 : 14)
     cell.value = ['','PORTFOLIO','IDEAS','ACTIVE','DONE',''][ci]
     cell.font  = font(C.hText, 9, true)
     cell.fill  = fill(C.hNav)
     cell.border = box(C.bdrH)
     cell.alignment = al('center', 'middle')
   })
-  ws.getRow(11).height = 18
+  ws.getRow(12).height = 18
 
   const portfs = data.portfolios || []
   portfs.slice(0, 6).forEach((p, i) => {
-    const r  = 12 + i
+    const r  = 13 + i
     const s  = data.summaries?.[p.id] || {}
     const bg = i%2===0 ? C.row0 : C.row1
     ws.getRow(r).height = 16
@@ -373,19 +334,18 @@ function buildOverview(ws, data) {
     })
   })
 
-  ws.getRow(18).height = 8
+  ws.getRow(19).height = 8
 
-  // ─ ACTIVE PROJECTS QUICK TABLE ─
-  sectionLabel(ws, 'B19:N19', '  ACTIVE PROJECT STATUS  ·  Sorted by DMAIC stage  ·  ⚠ = stalled >14 days without update')
-
-  headerRow(ws, 20, ['','#','PROJECT NAME','BELT TYPE','PORTFOLIO','STAGE','DMAIC PROGRESS','METRIC','BASELINE → TARGET','DAYS ACTIVE','STALLED?','LAST UPDATED','',''], 20)
+  // ─ ACTIVE PROJECTS TABLE ─
+  sectionLabel(ws, 'B20:N20', '  ACTIVE PROJECT STATUS  ·  Sorted by DMAIC stage  ·  ⚠ = stalled >14 days without update')
+  headerRow(ws, 21, ['','#','PROJECT NAME','BELT TYPE','PORTFOLIO','STAGE','DMAIC PROGRESS','METRIC','BASELINE → TARGET','DAYS ACTIVE','STALLED?','LAST UPDATED','',''], 20)
 
   const active = (data.projects||[]).filter(p=>p.stage!=='Closed')
   const stagOrd = ['Define','Measure','Analyse','Analyze','Improve','Control']
   const sortedActive = [...active].sort((a,b)=>stagOrd.indexOf(a.stage)-stagOrd.indexOf(b.stage))
 
   sortedActive.slice(0,12).forEach((p, i) => {
-    const r  = 21 + i
+    const r  = 22 + i
     const bg = i%2===0 ? C.row0 : C.row1
     const pf = (data.portfolios||[]).find(pf=>pf.id===p.portfolio_id)
     const ds = p.updated_at ? Math.floor((Date.now()-new Date(p.updated_at))/86400000) : null
@@ -406,7 +366,6 @@ function buildOverview(ws, data) {
       cell.value = v
       cell.border = box(C.bdr)
       cell.alignment = al(ci===9||ci===1?'center':'left','middle')
-
       if (ci===2) {
         cell.font = { color:{argb:'FF'+(stalled?C.amTx:C.bodyTx)}, size:10, bold:true, name:'Calibri' }
         cell.fill = fill(stalled?C.amBg:bg)
@@ -423,79 +382,14 @@ function buildOverview(ws, data) {
         if (stalled) { cell.font={color:{argb:'FF'+C.rdTx},size:9,bold:true,name:'Calibri'}; cell.fill=fill(C.rdBg) }
         else { cell.font={color:{argb:'FF'+C.gnTx},size:9,name:'Calibri'}; cell.fill=fill(bg) }
       } else {
-        cell.font = font(ci===1?C.muteTx:C.muteTx, 9)
+        cell.font = font(C.muteTx, 9)
         cell.fill = fill(bg)
       }
     })
   })
 
-  // ─ WAREHOUSE HEALTH ─
-  const whStart = 22 + Math.min(12, sortedActive.length)
-  ws.getRow(whStart).height = 8
-
-  const whLabel = whStart + 1
-  sectionLabel(ws, `B${whLabel}:N${whLabel}`, '  WAREHOUSE HEALTH SCORES  ·  Most recent shift per section')
-
-  // Header
-  const whHdr = whLabel + 1
-  ws.getRow(whHdr).height = 18
-  ;['','SECTION','HEALTH SCORE','SCORE BAR (0–100%)','','STATUS','LAST SHIFT','SHIFT','','','','','',''].forEach((v, ci) => {
-    const cell = ws.getRow(whHdr).getCell(ci + 1)
-    cell.value = v
-    cell.font  = font(C.hText, 9, true)
-    cell.fill  = fill(C.hNav)
-    cell.border = box(C.bdrH)
-    cell.alignment = al(ci === 2 || ci === 5 ? 'center' : 'left', 'middle')
-  })
-
-  const WH_SECTIONS = [
-    { id: 'inbound',  label: 'Inbound'  },
-    { id: 'icqa',     label: 'ICQA'     },
-    { id: 'pick',     label: 'Pick'     },
-    { id: 'pack',     label: 'Pack'     },
-    { id: 'outbound', label: 'Outbound' },
-  ]
-  const whScoreMap = Object.fromEntries((data.warehouseHealth || []).map(r => [r.section_id, r]))
-
-  function whBg(score)    { if (score == null) return C.gyBg; return score >= 85 ? C.gnBg : score >= 70 ? C.amBg : C.rdBg }
-  function whTx(score)    { if (score == null) return C.gyTx; return score >= 85 ? C.gnTx : score >= 70 ? C.amTx : C.rdTx }
-  function whLabel2(score){ if (score == null) return 'No Data'; return score >= 85 ? '● Good' : score >= 70 ? '◐ At Risk' : '○ Critical' }
-  function whBar(score)   { if (score == null) return '—'; const f = Math.round((score / 100) * 10); return '█'.repeat(f) + '░'.repeat(10 - f) + `  ${score.toFixed(1)}%` }
-
-  WH_SECTIONS.forEach((sec, i) => {
-    const r   = whHdr + 1 + i
-    const d   = whScoreMap[sec.id]
-    const scr = d?.score ?? null
-    const bg  = i % 2 === 0 ? C.row0 : C.row1
-    ws.getRow(r).height = 20
-
-    const vals = ['', sec.label, scr != null ? scr.toFixed(1) : '—', whBar(scr), '', whLabel2(scr), d?.date || '—', d?.shift_type || '—', '', '', '', '', '', '']
-    vals.forEach((v, ci) => {
-      const cell = ws.getRow(r).getCell(ci + 1)
-      cell.value  = v
-      cell.border = box(C.bdr)
-      if (ci === 2 || ci === 5) {
-        cell.fill  = fill(whBg(scr))
-        cell.font  = { color: { argb: 'FF' + whTx(scr) }, size: ci === 2 ? 11 : 9, bold: true, name: 'Calibri' }
-        cell.alignment = al('center', 'middle')
-      } else if (ci === 3) {
-        cell.fill  = fill(bg)
-        cell.font  = { color: { argb: 'FF' + whTx(scr) }, size: 8, name: 'Courier New' }
-        cell.alignment = al('left', 'middle')
-      } else if (ci === 1) {
-        cell.fill  = fill(bg)
-        cell.font  = font(C.bodyTx, 10, true)
-        cell.alignment = al('left', 'middle')
-      } else {
-        cell.fill  = fill(bg)
-        cell.font  = font(C.muteTx, 9)
-        cell.alignment = al('center', 'middle')
-      }
-    })
-  })
-
   // Footer
-  const footR = whHdr + 1 + WH_SECTIONS.length
+  const footR = 23 + Math.min(12, sortedActive.length)
   ws.getRow(footR).height = 12
   ws.mergeCells(`B${footR+1}:N${footR+1}`)
   const foot = ws.getCell(`B${footR+1}`)
