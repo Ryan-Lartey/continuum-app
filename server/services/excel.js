@@ -429,8 +429,73 @@ function buildOverview(ws, data) {
     })
   })
 
+  // ─ WAREHOUSE HEALTH ─
+  const whStart = 22 + Math.min(12, sortedActive.length)
+  ws.getRow(whStart).height = 8
+
+  const whLabel = whStart + 1
+  sectionLabel(ws, `B${whLabel}:N${whLabel}`, '  WAREHOUSE HEALTH SCORES  ·  Most recent shift per section')
+
+  // Header
+  const whHdr = whLabel + 1
+  ws.getRow(whHdr).height = 18
+  ;['','SECTION','HEALTH SCORE','SCORE BAR (0–100%)','','STATUS','LAST SHIFT','SHIFT','','','','','',''].forEach((v, ci) => {
+    const cell = ws.getRow(whHdr).getCell(ci + 1)
+    cell.value = v
+    cell.font  = font(C.hText, 9, true)
+    cell.fill  = fill(C.hNav)
+    cell.border = box(C.bdrH)
+    cell.alignment = al(ci === 2 || ci === 5 ? 'center' : 'left', 'middle')
+  })
+
+  const WH_SECTIONS = [
+    { id: 'inbound',  label: 'Inbound'  },
+    { id: 'icqa',     label: 'ICQA'     },
+    { id: 'pick',     label: 'Pick'     },
+    { id: 'pack',     label: 'Pack'     },
+    { id: 'outbound', label: 'Outbound' },
+  ]
+  const whScoreMap = Object.fromEntries((data.warehouseHealth || []).map(r => [r.section_id, r]))
+
+  function whBg(score)    { if (score == null) return C.gyBg; return score >= 85 ? C.gnBg : score >= 70 ? C.amBg : C.rdBg }
+  function whTx(score)    { if (score == null) return C.gyTx; return score >= 85 ? C.gnTx : score >= 70 ? C.amTx : C.rdTx }
+  function whLabel2(score){ if (score == null) return 'No Data'; return score >= 85 ? '● Good' : score >= 70 ? '◐ At Risk' : '○ Critical' }
+  function whBar(score)   { if (score == null) return '—'; const f = Math.round((score / 100) * 10); return '█'.repeat(f) + '░'.repeat(10 - f) + `  ${score.toFixed(1)}%` }
+
+  WH_SECTIONS.forEach((sec, i) => {
+    const r   = whHdr + 1 + i
+    const d   = whScoreMap[sec.id]
+    const scr = d?.score ?? null
+    const bg  = i % 2 === 0 ? C.row0 : C.row1
+    ws.getRow(r).height = 20
+
+    const vals = ['', sec.label, scr != null ? scr.toFixed(1) : '—', whBar(scr), '', whLabel2(scr), d?.date || '—', d?.shift_type || '—', '', '', '', '', '', '']
+    vals.forEach((v, ci) => {
+      const cell = ws.getRow(r).getCell(ci + 1)
+      cell.value  = v
+      cell.border = box(C.bdr)
+      if (ci === 2 || ci === 5) {
+        cell.fill  = fill(whBg(scr))
+        cell.font  = { color: { argb: 'FF' + whTx(scr) }, size: ci === 2 ? 11 : 9, bold: true, name: 'Calibri' }
+        cell.alignment = al('center', 'middle')
+      } else if (ci === 3) {
+        cell.fill  = fill(bg)
+        cell.font  = { color: { argb: 'FF' + whTx(scr) }, size: 8, name: 'Courier New' }
+        cell.alignment = al('left', 'middle')
+      } else if (ci === 1) {
+        cell.fill  = fill(bg)
+        cell.font  = font(C.bodyTx, 10, true)
+        cell.alignment = al('left', 'middle')
+      } else {
+        cell.fill  = fill(bg)
+        cell.font  = font(C.muteTx, 9)
+        cell.alignment = al('center', 'middle')
+      }
+    })
+  })
+
   // Footer
-  const footR = 22 + Math.min(12, sortedActive.length)
+  const footR = whHdr + 1 + WH_SECTIONS.length
   ws.getRow(footR).height = 12
   ws.mergeCells(`B${footR+1}:N${footR+1}`)
   const foot = ws.getCell(`B${footR+1}`)
