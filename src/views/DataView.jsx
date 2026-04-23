@@ -301,6 +301,7 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
   const [kpiTargets, setKpiTargets]     = useState(DEFAULT_TARGETS)
   const [timeWindow, setTimeWindow]     = useState(30)
   const [spcExpanded, setSpcExpanded]   = useState(false)
+  const [dataView, setDataView]         = useState('health') // 'health' | 'kpi'
 
   // Shift-level entry
   const [logMode, setLogMode]   = useState('daily')  // 'daily' | 'shift'
@@ -428,20 +429,47 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
     <div className="max-w-[1400px] space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>Data & Control Charts</h1>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
+            {dataView === 'health' ? 'Warehouse Health' : 'Data & Control Charts'}
+          </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>
-            I-MR Statistical Process Control · {metricData.length} data points for {metric?.label}
+            {dataView === 'health'
+              ? 'Most recent shift health score per section'
+              : `I-MR Statistical Process Control · ${metricData.length} data points for ${metric?.label}`}
           </p>
         </div>
-        <button onClick={() => setShowGlossary(g => !g)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-          style={{ background: showGlossary ? 'rgba(232,130,12,0.18)' : 'rgba(255,255,255,0.06)', color: showGlossary ? '#E8820C' : 'var(--text-2)', border: `1px solid ${showGlossary ? 'rgba(232,130,12,0.35)' : 'var(--border)'}` }}>
-          ? How to read this chart
-        </button>
+        <div className="flex items-center gap-3">
+          {/* View toggle */}
+          <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
+            {[
+              { key: 'health', label: '⬡ Warehouse Health' },
+              { key: 'kpi',   label: '▲ KPI Charts' },
+            ].map(v => (
+              <button key={v.key} onClick={() => setDataView(v.key)}
+                className="px-4 py-2 text-sm font-semibold transition-all"
+                style={{
+                  background: dataView === v.key ? '#E8820C' : 'rgba(255,255,255,0.04)',
+                  color: dataView === v.key ? '#fff' : 'var(--text-3)',
+                }}>
+                {v.label}
+              </button>
+            ))}
+          </div>
+          {dataView === 'kpi' && (
+            <button onClick={() => setShowGlossary(g => !g)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: showGlossary ? 'rgba(232,130,12,0.18)' : 'rgba(255,255,255,0.06)', color: showGlossary ? '#E8820C' : 'var(--text-2)', border: `1px solid ${showGlossary ? 'rgba(232,130,12,0.35)' : 'var(--border)'}` }}>
+              ? How to read this chart
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Warehouse section health scores */}
-      <SectionHealthCards sections={sections} />
+      {/* ── Warehouse Health view ── */}
+      {dataView === 'health' && <SectionHealthCards sections={sections} />}
+
+      {/* ── KPI Charts view ── */}
+      {dataView === 'kpi' && <>
 
       {/* Metric selector tiles */}
       <div className="grid grid-cols-4 gap-4">
@@ -1081,6 +1109,8 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
           )}
         </div>
       </div>
+
+      </>}
     </div>
   )
 }
