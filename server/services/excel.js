@@ -1305,6 +1305,135 @@ function buildMaturity(ws, data) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// WAREHOUSE HEALTH
+// ═══════════════════════════════════════════════════════════════════════════════
+function buildWarehouseHealth(ws, data) {
+  const SECTIONS = [
+    { id: 'inbound',  label: 'Inbound'  },
+    { id: 'icqa',     label: 'ICQA'     },
+    { id: 'pick',     label: 'Pick'     },
+    { id: 'pack',     label: 'Pack'     },
+    { id: 'outbound', label: 'Outbound' },
+  ]
+  const scoreMap = Object.fromEntries((data.warehouseHealth || []).map(r => [r.section_id, r]))
+
+  function healthBg(score) {
+    if (score == null) return C.gyBg
+    return score >= 85 ? C.gnBg : score >= 70 ? C.amBg : C.rdBg
+  }
+  function healthTx(score) {
+    if (score == null) return C.gyTx
+    return score >= 85 ? C.gnTx : score >= 70 ? C.amTx : C.rdTx
+  }
+  function healthLabel(score) {
+    if (score == null) return 'No Data'
+    return score >= 85 ? 'Good' : score >= 70 ? 'At Risk' : 'Critical'
+  }
+  function scoreBar(score) {
+    if (score == null) return '—'
+    const filled = Math.round((score / 100) * 10)
+    return '█'.repeat(filled) + '░'.repeat(10 - filled) + `  ${score.toFixed(1)}%`
+  }
+
+  // Col widths
+  ws.columns = [
+    { width: 2 }, { width: 16 }, { width: 14 }, { width: 30 },
+    { width: 14 }, { width: 12 }, { width: 12 }, { width: 14 },
+  ]
+
+  // Banner
+  ws.getRow(1).height = 40
+  ws.mergeCells('B1:H1')
+  const banner = ws.getRow(1).getCell(2)
+  banner.value = `${data.siteName || 'Amazon FC'}  ·  WAREHOUSE HEALTH SCORES`
+  banner.font  = { color: { argb: 'FFFFFFFF' }, size: 16, bold: true, name: 'Calibri' }
+  banner.fill  = fill(C.hNav)
+  banner.alignment = al('left', 'middle')
+
+  ws.getRow(2).height = 6
+  ws.getRow(3).height = 18
+  ws.mergeCells('B3:H3')
+  const sub = ws.getRow(3).getCell(2)
+  sub.value = `Weighted health scores per warehouse section  ·  Data as of ${new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}`
+  sub.font  = font(C.muteTx, 9, false, true)
+  sub.fill  = fill('F8FAFC')
+  sub.alignment = al('left', 'middle')
+
+  ws.getRow(4).height = 8
+
+  // Section header
+  headerRow(ws, 5, ['', 'SECTION', 'HEALTH SCORE', 'SCORE BAR', 'STATUS', 'LAST SHIFT DATE', 'SHIFT', ''], 20)
+
+  let r = 6
+  SECTIONS.forEach((sec, i) => {
+    const d    = scoreMap[sec.id]
+    const score = d?.score ?? null
+    const bg   = i % 2 === 0 ? C.row0 : C.row1
+    ws.getRow(r).height = 26
+
+    const vals = ['', sec.label, score != null ? score.toFixed(1) : '—', scoreBar(score), healthLabel(score), d?.date || '—', d?.shift_type || '—', '']
+    vals.forEach((v, ci) => {
+      const cell = ws.getRow(r).getCell(ci + 1)
+      cell.value  = v
+      cell.border = box(C.bdr)
+      cell.fill   = ci === 2 || ci === 4 ? fill(healthBg(score)) : fill(bg)
+      cell.font   = ci === 1
+        ? font(C.bodyTx, 10, true)
+        : ci === 2 || ci === 4
+          ? { color: { argb: 'FF' + healthTx(score) }, size: 10, bold: true, name: 'Calibri' }
+          : ci === 3
+            ? { color: { argb: 'FF' + healthTx(score) }, size: 8, name: 'Courier New' }
+            : font(C.muteTx, 9)
+      cell.alignment = al(ci === 2 || ci === 4 ? 'center' : 'left', 'middle')
+    })
+    r++
+  })
+
+  ws.getRow(r).height = 8
+  r++
+
+  // Legend
+  sectionLabel(ws, `B${r}:G${r}`, '  HOW SCORES ARE CALCULATED')
+  r++
+  const legend = [
+    ['Good (≥85%)', C.gnBg, C.gnTx, 'All key metrics tracking at or near target. Section performing well.'],
+    ['At Risk (70–84%)', C.amBg, C.amTx, 'One or more metrics off target. Corrective action recommended.'],
+    ['Critical (<70%)', C.rdBg, C.rdTx, 'Multiple metrics significantly off target. Immediate intervention required.'],
+  ]
+  legend.forEach(([label, bg, tx, desc]) => {
+    ws.getRow(r).height = 20
+    const lCell = ws.getRow(r).getCell(2)
+    lCell.value = label
+    lCell.font  = { color: { argb: 'FF' + tx }, size: 9, bold: true, name: 'Calibri' }
+    lCell.fill  = fill(bg)
+    lCell.border = box(C.bdr)
+    lCell.alignment = al('center', 'middle')
+
+    ws.mergeCells(`D${r}:G${r}`)
+    const dCell = ws.getRow(r).getCell(4)
+    dCell.value = desc
+    dCell.font  = font(C.bodyTx, 9)
+    dCell.fill  = fill(C.row0)
+    dCell.border = box(C.bdr)
+    dCell.alignment = al('left', 'middle', true)
+    r++
+  })
+
+  ws.getRow(r).height = 8
+  r++
+  sectionLabel(ws, `B${r}:G${r}`, '  SCORING FORMULA')
+  r++
+  ws.getRow(r).height = 20
+  const fCell = ws.getRow(r).getCell(2)
+  ws.mergeCells(`B${r}:G${r}`)
+  fCell.value = 'Health Score = Σ(metric_score × severity_weight) ÷ Σ(severity_weight)   where metric_score = min(actual/target × 100, 100) for higher-is-better metrics; min(target/actual × 100, 100) for lower-is-better metrics'
+  fCell.font  = font(C.muteTx, 9, false, true)
+  fCell.fill  = fill(C.row1)
+  fCell.border = box(C.bdr)
+  fCell.alignment = al('left', 'middle', true)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT
 // ═══════════════════════════════════════════════════════════════════════════════
 export async function generateExcelWorkbook(data) {
@@ -1326,6 +1455,7 @@ export async function generateExcelWorkbook(data) {
     { name:'📋 Activity',  color:'FF374151', fn: buildActivity,
       args: [data.activityLog||[]] },
     { name:'📐 Maturity',  color:'FFB45309', fn: buildMaturity },
+    { name:'🏭 Wh. Health', color:'FF0F766E', fn: buildWarehouseHealth },
   ]
 
   for (const s of sheets) {

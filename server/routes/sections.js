@@ -41,6 +41,10 @@ router.get('/', async (req, res) => {
     res.json(result)
   } catch (err) {
     console.error('sections GET error:', err)
+    // Missing tables (42P01) — return empty sections so frontend can render fallback cards.
+    if (err.code === '42P01') {
+      return res.json(SECTIONS.map(s => ({ ...s, score: null, score_status: 'no_data', last_shift: null })))
+    }
     res.status(500).json({ error: err.message })
   }
 })

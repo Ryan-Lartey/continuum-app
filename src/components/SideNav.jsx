@@ -56,7 +56,6 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
   const [input, setInput]             = useState('')
   const [loading, setLoading]         = useState(false)
   const [tip, setTip]                 = useState(null)
-  const [latestKpis, setLatestKpis]   = useState({})
   const [showKnowledge, setShowKnowledge] = useState(false)
   const [noteInput, setNoteInput]     = useState('')
   const [siteNotes, setSiteNotes]     = useState('')
@@ -74,17 +73,12 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
   const [settingsSaving, setSettingsSaving] = useState(false)
 
   useEffect(() => {
-    api.getLatestKpis().then(setLatestKpis).catch(() => {})
     api.getSite().then(s => {
       setSiteNotes(s.site_notes || '')
       setSettingsSiteName(s.site_name || 'Amazon FC')
       setSettingsShift(s.shift_pattern || 'Day')
       setSettingsTargets(s.kpi_targets || DEFAULT_TARGETS)
     }).catch(() => {})
-    const interval = setInterval(() => {
-      api.getLatestKpis().then(setLatestKpis).catch(() => {})
-    }, 30000)
-    return () => clearInterval(interval)
   }, [])
 
   // Cmd+K / Ctrl+K global shortcut to focus command input
@@ -142,7 +136,6 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
         const hasSignal = results.some(r => r.signal)
         setTip({ type: hasSignal ? 'warn' : 'ok', text: hasSignal ? `Signal detected on ${results[0].metric_label}` : `${entries.length} KPI${entries.length > 1 ? 's' : ''} logged` })
         onKpiLogged?.(results)
-        api.getLatestKpis().then(setLatestKpis).catch(() => {})
         pushHistory(text)
       } finally { setLoading(false) }
       return
@@ -180,10 +173,6 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
     setTip(null)
     pushHistory(text)
   }
-
-  const METRIC_LABELS  = { uph: 'UPH', accuracy: 'ACC', dpmo: 'DPMO', dts: 'DTS' }
-  const METRIC_TARGETS = { uph: 100, accuracy: 99.5, dpmo: 500, dts: 98 }
-  const HIGHER_BETTER  = { uph: true, accuracy: true, dpmo: false, dts: true }
 
   return (
     <aside className="w-52 flex-shrink-0 flex flex-col h-screen sticky top-0 border-r"
@@ -233,35 +222,6 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
           )
         })}
       </nav>
-
-      {/* ── KPI strip ── */}
-      <div className="mx-2 mt-1 mb-2 rounded px-3 py-2.5"
-        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)' }}>
-        <div className="text-[10px] font-semibold uppercase tracking-widest mb-2.5"
-          style={{ color: 'var(--text-3)', letterSpacing: '0.08em' }}>Live KPIs</div>
-        <div className="space-y-1.5">
-          {['uph', 'accuracy', 'dpmo', 'dts'].map(m => {
-            const d      = latestKpis[m]
-            const val    = d?.value
-            const target = METRIC_TARGETS[m]
-            const higher = HIGHER_BETTER[m]
-            let rag = 'grey'
-            if (val !== undefined) {
-              const ratio = higher ? val / target : target / val
-              rag = ratio >= 0.98 ? 'green' : ratio >= 0.93 ? 'amber' : 'red'
-            }
-            const ragColor = { green: '#4ade80', amber: '#fb923c', red: '#f87171', grey: '#3f3f46' }[rag]
-            return (
-              <div key={m} className="flex items-center justify-between">
-                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{METRIC_LABELS[m]}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: ragColor, fontVariantNumeric: 'tabular-nums' }}>
-                  {val !== undefined ? val.toLocaleString() : '—'}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
 
       <div className="flex-1" />
 

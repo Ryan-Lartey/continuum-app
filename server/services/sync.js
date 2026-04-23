@@ -1,19 +1,21 @@
-import db from '../db.js'
+import pool from '../db.js'
 import { generateExcelWorkbook } from './excel.js'
 import { uploadFileToOneDrive } from './graph.js'
 
-function getExcelConfig() {
-  const site = db.prepare('SELECT * FROM site_profile WHERE id = 1').get()
+async function getExcelConfig() {
   try {
+    const { rows } = await pool.query('SELECT excel_config FROM site_profile WHERE id = 1')
+    const site = rows[0]
     return site?.excel_config ? JSON.parse(site.excel_config) : null
   } catch { return null }
 }
 
-function buildActivityLog() {
+async function buildActivityLog() {
   const log = []
 
-  // KPI logs
-  const kpis = db.prepare('SELECT * FROM kpi_data ORDER BY date DESC, created_at DESC LIMIT 100').all()
+  const { rows: kpis } = await pool.query(
+    'SELECT * FROM kpi_data ORDER BY date DESC, created_at DESC LIMIT 100'
+  )
   kpis.forEach(k => {
     log.push({
       date: k.date,
@@ -23,19 +25,21 @@ function buildActivityLog() {
     })
   })
 
-  // Projects
-  const projects = db.prepare('SELECT * FROM projects ORDER BY updated_at DESC LIMIT 50').all()
+  const { rows: projects } = await pool.query(
+    'SELECT * FROM projects ORDER BY updated_at DESC LIMIT 50'
+  )
   projects.forEach(p => {
     log.push({
-      date: p.updated_at?.slice(0, 10) || p.created_at?.slice(0, 10) || '',
+      date: p.updated_at?.toISOString?.()?.slice(0, 10) || p.created_at?.toISOString?.()?.slice(0, 10) || '',
       type: 'Project Updated',
       description: p.title,
       detail: `Stage: ${p.stage}`
     })
   })
 
-  // Observations
-  const obs = db.prepare('SELECT * FROM observations ORDER BY date DESC LIMIT 50').all()
+  const { rows: obs } = await pool.query(
+    'SELECT * FROM observations ORDER BY date DESC LIMIT 50'
+  )
   obs.forEach(o => {
     log.push({
       date: o.date,
@@ -45,12 +49,13 @@ function buildActivityLog() {
     })
   })
 
-  // Ideas
   try {
-    const ideas = db.prepare('SELECT * FROM ideas ORDER BY created_at DESC LIMIT 30').all()
+    const { rows: ideas } = await pool.query(
+      'SELECT * FROM ideas ORDER BY created_at DESC LIMIT 30'
+    )
     ideas.forEach(i => {
       log.push({
-        date: i.created_at?.slice(0, 10) || '',
+        date: i.created_at?.toISOString?.()?.slice(0, 10) || '',
         type: 'Idea Raised',
         description: i.title,
         detail: `Stage: ${i.pipeline_stage}`
@@ -62,19 +67,22 @@ function buildActivityLog() {
 }
 
 export async function buildSyncData() {
-  const site       = db.prepare('SELECT * FROM site_profile WHERE id = 1').get()
-  const projects   = db.prepare('SELECT * FROM projects ORDER BY updated_at DESC').all()
-  const portfolios = db.prepare('SELECT * FROM portfolios WHERE status = ?').all('active')
-  const kpiData    = db.prepare('SELECT * FROM kpi_data ORDER BY date ASC').all()
+  const { rows: siteRows } = await pool.query('SELECT * FROM site_profile WHERE id = 1')
+  const site = siteRows[0] || {}
+
+  const { rows: projects } = await pool.query('SELECT * FROM projects ORDER BY updated_at DESC')
+  const { rows: portfolios } = await pool.query("SELECT * FROM portfolios WHERE status = 'active'")
+  const { rows: kpiData } = await pool.query('SELECT * FROM kpi_data ORDER BY date ASC')
 
   let ideas = []
-  try { ideas = db.prepare('SELECT * FROM ideas').all() } catch {}
+  try { const r = await pool.query('SELECT * FROM ideas'); ideas = r.rows } catch {}
 
-  // Maturity scores
   let maturity = null
-  try { maturity = db.prepare('SELECT * FROM maturity_scores ORDER BY month DESC LIMIT 1').get() } catch {}
+  try {
+    const r = await pool.query('SELECT * FROM maturity_scores ORDER BY month DESC LIMIT 1')
+    maturity = r.rows[0] || null
+  } catch {}
 
-  // Action/SOP counts from project charters
   let actionsComplete = 0, sopCount = 0
   projects.forEach(p => {
     try {
@@ -85,20 +93,18 @@ export async function buildSyncData() {
     } catch {}
   })
 
-  // Latest KPIs
   const latestKpis = {}
   for (const m of ['uph', 'accuracy', 'dpmo', 'dts']) {
-    const row = db.prepare('SELECT * FROM kpi_data WHERE LOWER(metric_id) = ? ORDER BY date DESC, created_at DESC LIMIT 1').get(m)
-    latestKpis[m] = row || null
+    const { rows } = await pool.query(
+      'SELECT * FROM kpi_data WHERE LOWER(metric_id) = $1 ORDER BY date DESC, created_at DESC LIMIT 1',
+      [m]
+    )
+    latestKpis[m] = rows[0] || null
   }
 
-  // KPI targets
   let kpiTargets = { UPH: 100, Accuracy: 99.5, DPMO: 500, DTS: 98 }
-  try {
-    if (site?.kpi_targets) kpiTargets = JSON.parse(site.kpi_targets)
-  } catch {}
+  try { if (site.kpi_targets) kpiTargets = JSON.parse(site.kpi_targets) } catch {}
 
-  // Portfolio summaries
   const summaries = {}
   for (const p of portfolios) {
     const pIdeas    = ideas.filter(i => i.portfolio_id === p.id)
@@ -107,14 +113,31 @@ export async function buildSyncData() {
       ideaCount:       pIdeas.filter(i => i.pipeline_stage === 'idea').length,
       definitionCount: pIdeas.filter(i => i.pipeline_stage === 'definition').length,
       validationCount: pIdeas.filter(i => i.pipeline_stage === 'validation').length,
-      assignedCount:   pProjects.filter(p => p.stage !== 'Closed').length,
-      finishedCount:   pProjects.filter(p => p.stage === 'Closed').length,
+      assignedCount:   pProjects.filter(pr => pr.stage !== 'Closed').length,
+      finishedCount:   pProjects.filter(pr => pr.stage === 'Closed').length,
     }
   }
 
+  // Warehouse Health data
+  let warehouseHealth = []
+  try {
+    const { rows } = await pool.query(`
+      SELECT DISTINCT ON (shs.section_id)
+        shs.section_id,
+        shs.score,
+        shs.status,
+        s.date,
+        s.shift_type
+      FROM section_health_scores shs
+      JOIN shifts s ON s.id = shs.shift_id
+      ORDER BY shs.section_id, s.date DESC, s.shift_type DESC
+    `)
+    warehouseHealth = rows
+  } catch {}
+
   return {
-    siteName:       site?.site_name || 'Amazon FC',
-    userName:       site?.user_name || 'Ryan',
+    siteName:       site.site_name || 'Amazon FC',
+    userName:       site.user_name || 'Ryan',
     kpiTargets,
     latestKpis,
     kpiData,
@@ -128,24 +151,23 @@ export async function buildSyncData() {
     activeProjects: projects.filter(p => p.stage !== 'Closed').length,
     closedProjects: projects.filter(p => p.stage === 'Closed').length,
     totalIdeas:     ideas.length,
-    activityLog:    buildActivityLog(),
+    activityLog:    await buildActivityLog(),
     kpiSummary:     latestKpis,
+    warehouseHealth,
   }
 }
 
 export async function runSync() {
-  const config = getExcelConfig()
+  const config = await getExcelConfig()
   const data   = await buildSyncData()
   const wb     = await generateExcelWorkbook(data)
 
-  // Always save locally
   const localPath = new URL('../../continuum-report.xlsx', import.meta.url).pathname
   await wb.xlsx.writeFile(localPath)
 
   let webUrl = null
   let error  = null
 
-  // Upload to OneDrive if configured
   if (config?.tenantId && config?.clientId && config?.clientSecret) {
     try {
       const buffer = await wb.xlsx.writeBuffer()
@@ -156,10 +178,9 @@ export async function runSync() {
     }
   }
 
-  // Update last sync timestamp in site_profile
   const now = new Date().toISOString()
   try {
-    db.prepare('UPDATE site_profile SET last_excel_sync = ? WHERE id = 1').run(now)
+    await pool.query('UPDATE site_profile SET last_excel_sync = $1 WHERE id = 1', [now])
   } catch {}
 
   return { success: true, webUrl, error, syncedAt: now, localPath }
