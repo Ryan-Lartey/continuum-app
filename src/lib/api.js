@@ -92,6 +92,14 @@ export const api = {
   createProcessMap: (data) => req('POST', '/process-maps', data),
   updateProcessMap: (id, data) => req('PUT', `/process-maps/${id}`, data),
   deleteProcessMap: (id) => req('DELETE', `/process-maps/${id}`),
+
+  // Warehouse Health
+  getSections: () => req('GET', '/sections'),
+  getSectionMetrics: (sectionId) => req('GET', `/sections/${sectionId}/metrics`),
+  addSectionMetric: (data) => req('POST', '/sections/metrics', data),
+  updateSectionMetric: (id, data) => req('PUT', `/sections/metrics/${id}`, data),
+  createShift: (data) => req('POST', '/sections/shifts', data),
+  submitShiftScores: (shiftId, entries) => req('POST', `/sections/shifts/${shiftId}/scores`, { entries }),
 }
 
 export function streamSwarm(workflowId, onEvent, onDone, onError) {

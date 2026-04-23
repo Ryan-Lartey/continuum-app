@@ -202,7 +202,92 @@ function Layer1AnnotationDot({ cx, cy, payload }) {
   )
 }
 
+const SECTION_COLORS = {
+  inbound:  '#3B7FDE',
+  icqa:     '#7C3AED',
+  pick:     '#E8820C',
+  pack:     '#16A34A',
+  outbound: '#0891B2',
+}
+
+function SectionHealthCards({ sections }) {
+  const now = new Date()
+  const hour = now.getHours()
+  // Day shift 6am-4pm, Night shift 8pm-6am
+  const currentShift = (hour >= 6 && hour < 16) ? 'day' : (hour >= 20 || hour < 6) ? 'night' : null
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold" style={{ color: 'var(--text-1)' }}>Warehouse Health</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+            Most recent shift score per section
+            {currentShift && <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: currentShift === 'day' ? 'rgba(232,130,12,0.15)' : 'rgba(59,127,222,0.15)', color: currentShift === 'day' ? '#E8820C' : '#60a5fa' }}>
+              {currentShift === 'day' ? '☀ Day shift active' : '🌙 Night shift active'}
+            </span>}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-5 gap-3">
+        {sections.map(s => {
+          const score = s.score
+          const color = SECTION_COLORS[s.id] || '#6b7280'
+          const rag = score === null ? 'grey' : score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red'
+          const ragColor = { green: '#4ade80', amber: '#fb923c', red: '#f87171', grey: '#6b7280' }[rag]
+          const ragLabel = { green: 'Healthy', amber: 'Monitor', red: 'At Risk', grey: 'No data' }[rag]
+          const barPct = score !== null ? score : 0
+
+          return (
+            <div key={s.id} className="card p-4 flex flex-col gap-2"
+              style={{ borderLeft: `3px solid ${color}` }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
+                  {s.label}
+                </span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                  style={{ background: `${ragColor}18`, color: ragColor }}>
+                  {ragLabel}
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-1">
+                <span style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-2px', color: score !== null ? ragColor : 'var(--text-3)', lineHeight: 1 }}>
+                  {score !== null ? Math.round(score) : '—'}
+                </span>
+                {score !== null && <span className="text-sm font-semibold" style={{ color: 'var(--text-3)' }}>/100</span>}
+              </div>
+
+              {/* Progress bar */}
+              <div className="rounded-full overflow-hidden" style={{ height: 5, background: 'rgba(255,255,255,0.06)' }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${barPct}%`, background: ragColor }} />
+              </div>
+
+              <div className="text-[10px]" style={{ color: 'var(--text-3)' }}>
+                {s.last_shift
+                  ? `${s.last_shift.shift_type === 'day' ? '☀' : '🌙'} ${s.last_shift.shift_type} · ${s.last_shift.date}`
+                  : 'No shift data yet'}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const FALLBACK_SECTIONS = [
+  { id: 'inbound',  label: 'Inbound',  order: 1, score: null, score_status: 'no_data', last_shift: null },
+  { id: 'icqa',     label: 'ICQA',     order: 2, score: null, score_status: 'no_data', last_shift: null },
+  { id: 'pick',     label: 'Pick',     order: 3, score: null, score_status: 'no_data', last_shift: null },
+  { id: 'pack',     label: 'Pack',     order: 4, score: null, score_status: 'no_data', last_shift: null },
+  { id: 'outbound', label: 'Outbound', order: 5, score: null, score_status: 'no_data', last_shift: null },
+]
+
 export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
+  const [sections, setSections]         = useState(FALLBACK_SECTIONS)
   const [selected, setSelected]         = useState('uph')
   const [latestKpis, setLatestKpis]     = useState({})
   const [metricData, setMetricData]     = useState([])
@@ -230,6 +315,7 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
   const [rightTab, setRightTab] = useState('limits') // 'limits' | 'data' | 'benchmark'
 
   useEffect(() => {
+    api.getSections().then(data => { if (data?.length) setSections(data) }).catch(() => {})
     api.getLatestKpis().then(setLatestKpis).catch(() => {})
     api.getKpis().then(setAllKpis).catch(() => {})
     api.getProjects().then(ps => setProjects(ps.filter(p => p.stage !== 'Closed'))).catch(() => {})
@@ -353,6 +439,9 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
           ? How to read this chart
         </button>
       </div>
+
+      {/* Warehouse section health scores */}
+      <SectionHealthCards sections={sections} />
 
       {/* Metric selector tiles */}
       <div className="grid grid-cols-4 gap-4">

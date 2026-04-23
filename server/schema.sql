@@ -160,3 +160,47 @@ CREATE TABLE IF NOT EXISTS process_maps (
 INSERT INTO site_profile (site_name, user_name)
 SELECT 'Amazon FC', 'Ryan'
 WHERE NOT EXISTS (SELECT 1 FROM site_profile LIMIT 1);
+
+-- ─── Warehouse Health Score System ───────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS section_metrics (
+  id SERIAL PRIMARY KEY,
+  section_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  metric_key TEXT NOT NULL,
+  target DOUBLE PRECISION NOT NULL,
+  direction TEXT NOT NULL CHECK (direction IN ('higher', 'lower')),
+  severity_weight INTEGER NOT NULL DEFAULT 5 CHECK (severity_weight BETWEEN 1 AND 10),
+  unit TEXT DEFAULT '',
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS shifts (
+  id SERIAL PRIMARY KEY,
+  date TEXT NOT NULL,
+  shift_type TEXT NOT NULL CHECK (shift_type IN ('day', 'night')),
+  status TEXT DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'complete', 'incomplete')),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(date, shift_type)
+);
+
+CREATE TABLE IF NOT EXISTS metric_entries (
+  id SERIAL PRIMARY KEY,
+  shift_id INTEGER NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+  metric_id INTEGER NOT NULL REFERENCES section_metrics(id),
+  actual_value DOUBLE PRECISION,
+  metric_score DOUBLE PRECISION,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(shift_id, metric_id)
+);
+
+CREATE TABLE IF NOT EXISTS section_health_scores (
+  id SERIAL PRIMARY KEY,
+  shift_id INTEGER NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+  section_id TEXT NOT NULL,
+  score DOUBLE PRECISION,
+  status TEXT DEFAULT 'incomplete' CHECK (status IN ('complete', 'incomplete')),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(shift_id, section_id)
+);

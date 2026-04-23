@@ -20,6 +20,7 @@ import swarmRoutes from './routes/swarm.js'
 import mapsRouter from './routes/maps.js'
 import demoRoutes from './routes/demo.js'
 import processMapsRouter from './routes/process-maps.js'
+import sectionsRouter from './routes/sections.js'
 import { startAutomation } from './automation.js'
 import { runSync } from './services/sync.js'
 
@@ -54,6 +55,7 @@ app.use('/api/swarm', swarmRoutes)
 app.use('/api/maps', mapsRouter)
 app.use('/api/demo', demoRoutes)
 app.use('/api/process-maps', processMapsRouter)
+app.use('/api/sections', sectionsRouter)
 
 // ─── Excel sync routes ────────────────────────────────────────────────────────
 
