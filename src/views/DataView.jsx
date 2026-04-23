@@ -210,40 +210,46 @@ const SECTION_COLORS = {
   outbound: '#0891B2',
 }
 
-function SectionHealthCards({ sections }) {
-  const now = new Date()
-  const hour = now.getHours()
-  // Day shift 6am-4pm, Night shift 8pm-6am
+function SectionCards({ sections, selected, onSelect }) {
+  const hour = new Date().getHours()
   const currentShift = (hour >= 6 && hour < 16) ? 'day' : (hour >= 20 || hour < 6) ? 'night' : null
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold" style={{ color: 'var(--text-1)' }}>Warehouse Health</h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-            Most recent shift score per section
-            {currentShift && <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: currentShift === 'day' ? 'rgba(232,130,12,0.15)' : 'rgba(59,127,222,0.15)', color: currentShift === 'day' ? '#E8820C' : '#60a5fa' }}>
-              {currentShift === 'day' ? '☀ Day shift active' : '🌙 Night shift active'}
-            </span>}
+          <p className="text-xs" style={{ color: 'var(--text-3)' }}>
+            Select a section to view its metrics and performance
+            {currentShift && (
+              <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                style={{ background: currentShift === 'day' ? 'rgba(232,130,12,0.15)' : 'rgba(59,127,222,0.15)', color: currentShift === 'day' ? '#E8820C' : '#60a5fa' }}>
+                {currentShift === 'day' ? '☀ Day shift active' : '🌙 Night shift active'}
+              </span>
+            )}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-5 gap-3">
         {sections.map(s => {
-          const score = s.score
-          const color = SECTION_COLORS[s.id] || '#6b7280'
-          const rag = score === null ? 'grey' : score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red'
+          const score    = s.score
+          const color    = SECTION_COLORS[s.id] || '#6b7280'
+          const isActive = selected === s.id
+          const rag      = score === null ? 'grey' : score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red'
           const ragColor = { green: '#4ade80', amber: '#fb923c', red: '#f87171', grey: '#6b7280' }[rag]
           const ragLabel = { green: 'Healthy', amber: 'Monitor', red: 'At Risk', grey: 'No data' }[rag]
-          const barPct = score !== null ? score : 0
 
           return (
-            <div key={s.id} className="card p-4 flex flex-col gap-2"
-              style={{ borderLeft: `3px solid ${color}` }}>
+            <button key={s.id} onClick={() => onSelect(isActive ? null : s.id)}
+              className="card p-4 flex flex-col gap-2 text-left transition-all"
+              style={{
+                borderLeft: `3px solid ${color}`,
+                borderColor: isActive ? color : undefined,
+                borderWidth: isActive ? 2 : 1,
+                background: isActive ? `${color}10` : undefined,
+              }}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: isActive ? color : 'var(--text-3)' }}>
                   {s.label}
                 </span>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
@@ -259,10 +265,9 @@ function SectionHealthCards({ sections }) {
                 {score !== null && <span className="text-sm font-semibold" style={{ color: 'var(--text-3)' }}>/100</span>}
               </div>
 
-              {/* Progress bar */}
-              <div className="rounded-full overflow-hidden" style={{ height: 5, background: 'rgba(255,255,255,0.06)' }}>
+              <div className="rounded-full overflow-hidden" style={{ height: 4, background: 'rgba(255,255,255,0.06)' }}>
                 <div className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${barPct}%`, background: ragColor }} />
+                  style={{ width: `${score ?? 0}%`, background: ragColor }} />
               </div>
 
               <div className="text-[10px]" style={{ color: 'var(--text-3)' }}>
@@ -270,7 +275,7 @@ function SectionHealthCards({ sections }) {
                   ? `${s.last_shift.shift_type === 'day' ? '☀' : '🌙'} ${s.last_shift.shift_type} · ${s.last_shift.date}`
                   : 'No shift data yet'}
               </div>
-            </div>
+            </button>
           )
         })}
       </div>
@@ -301,7 +306,7 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
   const [kpiTargets, setKpiTargets]     = useState(DEFAULT_TARGETS)
   const [timeWindow, setTimeWindow]     = useState(30)
   const [spcExpanded, setSpcExpanded]   = useState(false)
-  const [dataView, setDataView]         = useState('health') // 'health' | 'kpi'
+  const [selectedSection, setSelectedSection] = useState(null)
 
   // Shift-level entry
   const [logMode, setLogMode]   = useState('daily')  // 'daily' | 'shift'
@@ -425,53 +430,80 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
     kpiByMetric[m.id] = allKpis.filter(k => k.metric_id === m.id).sort((a, b) => a.date.localeCompare(b.date))
   }
 
+  const activeSection = sections.find(s => s.id === selectedSection)
+  const sectionColor  = selectedSection ? (SECTION_COLORS[selectedSection] || '#6b7280') : '#E8820C'
+
   return (
     <div className="max-w-[1400px] space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
-            {dataView === 'health' ? 'Warehouse Health' : 'Data & Control Charts'}
+            Warehouse Health
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>
-            {dataView === 'health'
-              ? 'Most recent shift health score per section'
-              : `I-MR Statistical Process Control · ${metricData.length} data points for ${metric?.label}`}
+            {selectedSection
+              ? `${activeSection?.label} — metrics, scores and performance charts`
+              : 'Most recent shift health score per section'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* View toggle */}
-          <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-            {[
-              { key: 'health', label: '⬡ Warehouse Health' },
-              { key: 'kpi',   label: '▲ KPI Charts' },
-            ].map(v => (
-              <button key={v.key} onClick={() => setDataView(v.key)}
-                className="px-4 py-2 text-sm font-semibold transition-all"
-                style={{
-                  background: dataView === v.key ? '#E8820C' : 'rgba(255,255,255,0.04)',
-                  color: dataView === v.key ? '#fff' : 'var(--text-3)',
-                }}>
-                {v.label}
-              </button>
-            ))}
+        {selectedSection && (
+          <button onClick={() => setShowGlossary(g => !g)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: showGlossary ? 'rgba(232,130,12,0.18)' : 'rgba(255,255,255,0.06)', color: showGlossary ? '#E8820C' : 'var(--text-2)', border: `1px solid ${showGlossary ? 'rgba(232,130,12,0.35)' : 'var(--border)'}` }}>
+            ? How to read this chart
+          </button>
+        )}
+      </div>
+
+      {/* Section selector cards */}
+      <SectionCards sections={sections} selected={selectedSection} onSelect={setSelectedSection} />
+
+      {/* ── Section detail ── */}
+      {selectedSection && <>
+
+      {/* Section health summary */}
+      {activeSection && (() => {
+        const score    = activeSection.score
+        const rag      = score === null ? 'grey' : score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red'
+        const ragColor = { green: '#4ade80', amber: '#fb923c', red: '#f87171', grey: '#6b7280' }[rag]
+        const ragLabel = { green: 'Healthy', amber: 'Monitor', red: 'At Risk', grey: 'No data' }[rag]
+        return (
+          <div className="card p-5 flex items-center gap-6" style={{ borderLeft: `4px solid ${sectionColor}` }}>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-3)' }}>{activeSection.label} — Health Score</div>
+              <div className="flex items-baseline gap-2">
+                <span style={{ fontSize: 52, fontWeight: 800, letterSpacing: '-3px', color: score !== null ? ragColor : 'var(--text-3)', lineHeight: 1 }}>
+                  {score !== null ? Math.round(score) : '—'}
+                </span>
+                {score !== null && <span className="text-lg font-semibold" style={{ color: 'var(--text-3)' }}>/100</span>}
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="rounded-full overflow-hidden mb-2" style={{ height: 8, background: 'rgba(255,255,255,0.06)' }}>
+                <div className="h-full rounded-full" style={{ width: `${score ?? 0}%`, background: ragColor }} />
+              </div>
+              <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--text-3)' }}>
+                <span className="px-2 py-0.5 rounded-full font-semibold text-[10px]" style={{ background: `${ragColor}18`, color: ragColor }}>{ragLabel}</span>
+                {activeSection.last_shift
+                  ? <span>{activeSection.last_shift.shift_type === 'day' ? '☀ Day' : '🌙 Night'} shift · {activeSection.last_shift.date}</span>
+                  : <span>No shift data yet</span>}
+              </div>
+            </div>
           </div>
-          {dataView === 'kpi' && (
-            <button onClick={() => setShowGlossary(g => !g)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: showGlossary ? 'rgba(232,130,12,0.18)' : 'rgba(255,255,255,0.06)', color: showGlossary ? '#E8820C' : 'var(--text-2)', border: `1px solid ${showGlossary ? 'rgba(232,130,12,0.35)' : 'var(--border)'}` }}>
-              ? How to read this chart
-            </button>
-          )}
+        )
+      })()}
+
+      {/* Metrics placeholder — will show metric tiles + SPC charts once configured */}
+      <div className="card p-8 flex flex-col items-center justify-center text-center gap-3" style={{ borderStyle: 'dashed', borderColor: sectionColor + '40' }}>
+        <div style={{ fontSize: 32, opacity: 0.3 }}>◈</div>
+        <div className="font-semibold text-sm" style={{ color: 'var(--text-2)' }}>No metrics configured for {activeSection?.label} yet</div>
+        <div className="text-xs max-w-sm leading-relaxed" style={{ color: 'var(--text-3)' }}>
+          Metrics for this section will appear here once configured. Each metric will show its actual value, score vs target, severity weight, and SPC trend chart.
         </div>
       </div>
 
-      {/* ── Warehouse Health view ── */}
-      {dataView === 'health' && <SectionHealthCards sections={sections} />}
-
-      {/* ── KPI Charts view ── */}
-      {dataView === 'kpi' && <>
-
-      {/* Metric selector tiles */}
+      {false && <>
+      {/* KPI tiles — shown per-section once metrics are assigned */}
       <div className="grid grid-cols-4 gap-4">
         {METRICS.map(m => {
           const d         = latestKpis[m.id]
@@ -1109,6 +1141,8 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
           )}
         </div>
       </div>
+
+      </>}
 
       </>}
     </div>
