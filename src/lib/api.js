@@ -14,7 +14,7 @@ async function req(method, path, body) {
     localStorage.removeItem('continuum_auth_token')
     localStorage.removeItem('continuum_auth_role')
     localStorage.removeItem('continuum_auth_name')
-    window.location.reload()
+    window.dispatchEvent(new Event('continuum:logout'))
     throw new Error('Session expired')
   }
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`)

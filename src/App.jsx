@@ -34,9 +34,16 @@ export default function App() {
   })
 
   useEffect(() => {
+    if (!authed) return
     api.getLatestKpis().then(kpis => {
       setSignals(Object.entries(kpis).filter(([, v]) => v?.signal).map(([k]) => k))
     }).catch(() => {})
+  }, [authed])
+
+  useEffect(() => {
+    function onForceLogout() { handleLogout() }
+    window.addEventListener('continuum:logout', onForceLogout)
+    return () => window.removeEventListener('continuum:logout', onForceLogout)
   }, [])
 
   useEffect(() => {
