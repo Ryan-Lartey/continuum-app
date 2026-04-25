@@ -264,7 +264,7 @@ function SectionCard({ s, selected, onSelect }) {
         <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: `${ragColor}18`, color: ragColor, border: `1px solid ${ragColor}28` }}>{ragLabel}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, marginBottom: 14 }}>
-        <span style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', background: `linear-gradient(135deg, #ffffff 0%, ${ragColor} 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+        <span style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', color: ragColor }}>
           {score !== null ? Math.round(score) : '—'}
         </span>
         {score !== null && <span style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 5 }}>/100</span>}

@@ -167,7 +167,8 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
       if (t2) setTier2Today(t2)
       setPortfolios(pfs)
       setRecentIdeas(Array.isArray(ideas) ? ideas : [])
-      setSections(Array.isArray(secs) ? secs : [])
+      // Collapse to 3 top-level sections: Inbound, ICQA, Outbound
+      setSections(Array.isArray(secs) ? secs.filter(s => ['inbound', 'icqa', 'outbound'].includes(s.id)) : [])
       setAllObs(obs)
 
       const briefIsError = (latestBrief?.content || '').includes('No API key configured')

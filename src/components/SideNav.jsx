@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { api, streamAgent } from '../lib/api.js'
 import PresentationHotspot from './PresentationHotspot.jsx'
 import {
@@ -13,7 +14,7 @@ const NAV_ALL = [
   { id: 'floor',         Icon: Activity,        label: 'Floor Walk'    },
   { id: 'projects',      Icon: Target,          label: 'Projects'      },
   { id: 'portfolio',     Icon: Kanban,          label: 'Portfolio'     },
-  { id: 'reports',       Icon: FileBarChart,    label: 'Reports'       },
+  { id: 'reports',       Icon: FileBarChart,    label: 'Reports',       adminOnly: true },
   { id: 'process-maps',  Icon: GitFork,         label: 'Process Maps'  },
 ]
 
@@ -69,7 +70,7 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
 
   // Settings modal state
   const [showSettings, setShowSettings] = useState(false)
-  const [settingsSiteName, setSettingsSiteName] = useState('Amazon FC')
+  const [settingsSiteName, setSettingsSiteName] = useState('XSE6')
   const [settingsShift, setSettingsShift] = useState('Day')
   const [settingsTargets, setSettingsTargets] = useState(DEFAULT_TARGETS)
   const [settingsSaving, setSettingsSaving] = useState(false)
@@ -468,9 +469,9 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
       </div>
 
       {/* ── Settings Modal ── */}
-      {showSettings && (
+      {showSettings && createPortal(
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center"
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
           style={{ background: 'rgba(0,0,0,0.7)' }}
           onClick={() => setShowSettings(false)}
         >
@@ -599,12 +600,13 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Site Knowledge Panel ── */}
-      {showKnowledge && (
-        <div className="fixed inset-0 z-50 flex items-end justify-start" onClick={() => setShowKnowledge(false)}>
+      {showKnowledge && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-end justify-start" onClick={() => setShowKnowledge(false)}>
           <div
             className="w-72 mb-4 ml-4 overflow-hidden"
             style={{
@@ -690,7 +692,8 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </aside>
   )
