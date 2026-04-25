@@ -90,12 +90,12 @@ function BriefMarkdown({ text }) {
 
 const HEADCOUNT_KEY = `continuum_headcount_${TODAY}`
 function loadHeadcount() {
-  try { return JSON.parse(localStorage.getItem(HEADCOUNT_KEY)) || { inbound: '', outbound: '', pick: '' } }
-  catch { return { inbound: '', outbound: '', pick: '' } }
+  try { return JSON.parse(localStorage.getItem(HEADCOUNT_KEY)) || { inbound: '', outbound: '' } }
+  catch { return { inbound: '', outbound: '' } }
 }
 function headcountString(hc) {
-  if (!hc.inbound && !hc.outbound && !hc.pick) return ''
-  return `Current headcount: Inbound: ${hc.inbound || '—'}, Outbound: ${hc.outbound || '—'}, Pick: ${hc.pick || '—'}.`
+  if (!hc.inbound && !hc.outbound) return ''
+  return `Current headcount: Inbound: ${hc.inbound || '—'}, Outbound: ${hc.outbound || '—'}.`
 }
 
 // ─── Glass card shared style ──────────────────────────────────────────────────
@@ -350,13 +350,12 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
   }
 
   const routinePills = [
-    { label: 'Brief',  done: briefToday || briefStreaming, onClick: () => autoGenerateBrief(latestKpis, projects, patterns) },
-    { label: 'KPIs',   done: todayKpiLogged,               onClick: () => onNavigate('data') },
-    { label: 'Floor',  done: todayObs > 0,                 onClick: () => onNavigate('floor') },
-    { label: 'Tier 2', done: tier2Prepped,                 onClick: openTier2 },
+    { label: 'Brief', done: briefToday || briefStreaming, onClick: () => autoGenerateBrief(latestKpis, projects, patterns) },
+    { label: 'KPIs',  done: todayKpiLogged,               onClick: () => onNavigate('data') },
+    { label: 'Floor', done: todayObs > 0,                 onClick: () => onNavigate('floor') },
   ]
   const routineDone = routinePills.filter(p => p.done).length
-  const allGreen    = routineDone === 4
+  const allGreen    = routineDone === 3
 
   const todayObsList = allObs.filter(o => o.date === TODAY)
 
@@ -415,7 +414,7 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
           </button>
         ))}
         <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 4, color: allGreen ? '#4ade80' : 'var(--text-3)' }}>
-          {allGreen ? '✓ All done' : `${routineDone}/4`}
+          {allGreen ? '✓ All done' : `${routineDone}/3`}
         </span>
       </div>
 
@@ -566,7 +565,7 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
             </button>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            {[{ key: 'inbound', label: 'Inbound' }, { key: 'outbound', label: 'Outbound' }, { key: 'pick', label: 'Pick' }].map(({ key, label }) => (
+            {[{ key: 'inbound', label: 'Inbound' }, { key: 'outbound', label: 'Outbound' }].map(({ key, label }) => (
               <div key={key} style={{ flex: 1 }}>
                 <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-3)', marginBottom: 6 }}>{label}</label>
                 <input type="number" min="0" value={headcount[key]}
@@ -731,11 +730,10 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
       </div>
 
       {/* ── Quick Agents ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {[
-          { label: 'Prepare Tier 2', sub: 'RAG status · talking points · escalations', icon: '⬡', color: '#f87171', onClick: openTier2 },
-          { label: 'Gemba Agent',    sub: 'Structure floor obs · identify waste',       icon: '◎', color: '#4ade80', onClick: () => onOpenAgent('gemba-agent', null) },
-          { label: 'DMAIC Coach',    sub: 'Guide project stage · root cause · actions', icon: '◆', color: '#a78bfa', onClick: () => onOpenAgent('project-agent', null) },
+          { label: 'Gemba Agent', sub: 'Structure floor obs · identify waste',       icon: '◎', color: '#4ade80', onClick: () => onOpenAgent('gemba-agent', null) },
+          { label: 'DMAIC Coach', sub: 'Guide project stage · root cause · actions', icon: '◆', color: '#a78bfa', onClick: () => onOpenAgent('project-agent', null) },
         ].map(btn => (
           <button key={btn.label} onClick={btn.onClick} style={{ ...glass, padding: '14px 16px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.06)', transition: 'all 220ms cubic-bezier(0.34,1.56,0.64,1)' }}
             onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = `${btn.color}30` }}

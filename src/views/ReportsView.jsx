@@ -1004,20 +1004,34 @@ export default function ReportsView({ onOpenAgent, onNavigate, demoMode }) {
         </PresentationOverlay>
       )}
 
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>Reports</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>Portfolio, GM reports, maturity scoring, A3 documents, and process maps</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+        {/* Left: title + tabs stacked with no gap */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ marginBottom: 16 }}>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>Reports</h1>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>Portfolio, GM reports, maturity scoring, A3 documents, and process maps</p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setActiveTab(t.id)}
+                className={btnBase}
+                style={activeTab === t.id
+                  ? { background: '#E8820C', color: 'white' }
+                  : { background: 'var(--bg-input)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Excel Sync Panel */}
-        <div className="card p-4" style={{ minWidth: 280, maxWidth: 360, flexShrink: 0 }}>
+        {/* Right: Excel Sync Panel */}
+        <div className="card p-4" style={{ minWidth: 280, maxWidth: 340, flexShrink: 0 }}>
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span style={{ fontSize: 16 }}>⊞</span>
               <span className="font-semibold text-sm" style={{ color: '#217346' }}>Excel Sync</span>
             </div>
-            <button onClick={() => setShowSyncConfig(v => !v)} style={{ fontSize: 11, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px', borderRadius: 6, background: 'var(--bg-input)' }}>
+            <button onClick={() => setShowSyncConfig(v => !v)} style={{ fontSize: 11, color: 'var(--text-3)', cursor: 'pointer', padding: '2px 6px', borderRadius: 6, background: 'var(--bg-input)', border: 'none' }}>
               {showSyncConfig ? 'Close' : 'Configure'}
             </button>
           </div>
@@ -1042,14 +1056,8 @@ export default function ReportsView({ onOpenAgent, onNavigate, demoMode }) {
             }}>
               {syncing ? 'Syncing...' : 'Sync Now →'}
             </button>
-            <button
-              onClick={() => { window.location.href = '/api/sync/download' }}
-              title="Download Excel report"
-              style={{
-                padding: '7px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: 'rgba(33,115,70,0.12)', color: '#217346',
-                fontSize: 14, fontWeight: 700, transition: 'all 0.15s'
-              }}>
+            <button onClick={() => { window.location.href = '/api/sync/download' }} title="Download Excel report"
+              style={{ padding: '7px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'rgba(33,115,70,0.12)', color: '#217346', fontSize: 14, fontWeight: 700 }}>
               ⬇
             </button>
           </div>
@@ -1072,35 +1080,16 @@ export default function ReportsView({ onOpenAgent, onNavigate, demoMode }) {
                     value={syncConfig[key]}
                     onChange={e => setSyncConfig(s => ({ ...s, [key]: e.target.value }))}
                     placeholder={key === 'oneDrivePath' ? 'Continuum' : `Enter ${label}`}
-                    style={{
-                      width: '100%', padding: '5px 8px', borderRadius: 6, fontSize: 11,
-                      background: 'var(--bg-input)', border: '1px solid var(--border)',
-                      color: 'var(--text-1)', outline: 'none', boxSizing: 'border-box'
-                    }}
+                    style={{ width: '100%', padding: '5px 8px', borderRadius: 6, fontSize: 11, background: 'var(--bg-input)', border: '1px solid var(--border)', color: 'var(--text-1)', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               ))}
-              <button onClick={saveSyncConfig} style={{
-                width: '100%', marginTop: 4, padding: '6px 0', borderRadius: 7, border: 'none', cursor: 'pointer',
-                background: 'var(--accent, #E8820C)', color: 'white', fontSize: 11, fontWeight: 700
-              }}>
+              <button onClick={saveSyncConfig} style={{ width: '100%', marginTop: 4, padding: '6px 0', borderRadius: 7, border: 'none', cursor: 'pointer', background: 'var(--accent, #E8820C)', color: 'white', fontSize: 11, fontWeight: 700 }}>
                 Save Credentials
               </button>
             </div>
           )}
         </div>
-      </div>
-
-      <div className="flex gap-2 flex-wrap">
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={btnBase}
-            style={activeTab === t.id
-              ? { background: '#E8820C', color: 'white' }
-              : { background: 'var(--bg-input)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
-            {t.label}
-          </button>
-        ))}
       </div>
 
       {/* Portfolio */}
