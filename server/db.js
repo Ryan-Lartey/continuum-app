@@ -6,7 +6,7 @@ const { Pool } = pg
 
 // Supabase uses trusted CAs — rejectUnauthorized: true is safe and required for security.
 // Never use rejectUnauthorized: false in production (disables certificate validation).
-const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
+const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 
 const poolConfig = {
   connectionString: process.env.DATABASE_URL,
