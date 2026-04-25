@@ -213,64 +213,103 @@ const SECTION_COLORS = {
 function SectionCards({ sections, selected, onSelect }) {
   const hour = new Date().getHours()
   const currentShift = (hour >= 6 && hour < 16) ? 'day' : (hour >= 20 || hour < 6) ? 'night' : null
+  const [hoveredId, setHoveredId] = useState(null)
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-            Select a section to view its metrics and performance
-            {currentShift && (
-              <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: currentShift === 'day' ? 'rgba(232,130,12,0.15)' : 'rgba(59,127,222,0.15)', color: currentShift === 'day' ? '#E8820C' : '#60a5fa' }}>
-                {currentShift === 'day' ? '☀ Day shift active' : '🌙 Night shift active'}
-              </span>
-            )}
-          </p>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <p style={{ fontSize: 11, color: '#64748B', margin: 0 }}>
+          Select a section to view its metrics and performance
+        </p>
+        {currentShift && (
+          <span style={{
+            padding: '3px 10px', borderRadius: 999, fontSize: 10, fontWeight: 700,
+            background: currentShift === 'day' ? 'rgba(232,130,12,0.12)' : 'rgba(59,127,222,0.12)',
+            color: currentShift === 'day' ? '#E8820C' : '#60a5fa',
+            border: `1px solid ${currentShift === 'day' ? 'rgba(232,130,12,0.25)' : 'rgba(59,127,222,0.25)'}`,
+          }}>
+            {currentShift === 'day' ? '☀ Day shift active' : '🌙 Night shift active'}
+          </span>
+        )}
       </div>
 
-      <div className="grid grid-cols-5 gap-3">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
         {sections.map(s => {
-          const score    = s.score
-          const color    = SECTION_COLORS[s.id] || '#6b7280'
-          const isActive = selected === s.id
-          const rag      = score === null ? 'grey' : score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red'
-          const ragColor = { green: '#4ade80', amber: '#fb923c', red: '#f87171', grey: '#6b7280' }[rag]
-          const ragLabel = { green: 'Healthy', amber: 'Monitor', red: 'At Risk', grey: 'No data' }[rag]
+          const score     = s.score
+          const color     = SECTION_COLORS[s.id] || '#6b7280'
+          const isActive  = selected === s.id
+          const isHovered = hoveredId === s.id
+          const rag       = score === null ? 'grey' : score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red'
+          const ragColor  = { green: '#22C55E', amber: '#F59E0B', red: '#EF4444', grey: '#94A3B8' }[rag]
+          const ragLabel  = { green: 'Healthy', amber: 'Monitor', red: 'At Risk', grey: 'No data' }[rag]
+          const ragGlow   = { green: 'rgba(34,197,94,0.22)', amber: 'rgba(245,158,11,0.22)', red: 'rgba(239,68,68,0.22)', grey: 'rgba(148,163,184,0.08)' }[rag]
 
           return (
-            <button key={s.id} onClick={() => onSelect(isActive ? null : s.id)}
-              className="card p-4 flex flex-col gap-2 text-left transition-all"
+            <button key={s.id}
+              onClick={() => onSelect(isActive ? null : s.id)}
+              onMouseEnter={() => setHoveredId(s.id)}
+              onMouseLeave={() => setHoveredId(null)}
               style={{
-                borderLeft: `3px solid ${color}`,
-                borderColor: isActive ? color : undefined,
-                borderWidth: isActive ? 2 : 1,
-                background: isActive ? `${color}10` : undefined,
+                background: isActive ? `${color}0d` : 'rgba(255,255,255,0.04)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: `1px solid ${isActive ? color + '55' : isHovered ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.07)'}`,
+                borderTop: `3px solid ${isActive ? color : isHovered ? color + '70' : 'transparent'}`,
+                borderRadius: 14,
+                padding: 16,
+                textAlign: 'left',
+                cursor: 'pointer',
+                transition: 'all 200ms cubic-bezier(0.34,1.56,0.64,1)',
+                transform: isHovered && !isActive ? 'translateY(-2px)' : 'none',
+                boxShadow: isActive
+                  ? `0 8px 32px ${ragGlow}`
+                  : isHovered ? '0 8px 28px rgba(0,0,0,0.35)'
+                  : '0 2px 12px rgba(0,0,0,0.2)',
               }}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: isActive ? color : 'var(--text-3)' }}>
+
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+                  color: isActive ? color : '#64748B',
+                }}>
                   {s.label}
                 </span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{ background: `${ragColor}18`, color: ragColor }}>
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
+                  background: `${ragColor}18`, color: ragColor,
+                  border: `1px solid ${ragColor}28`,
+                }}>
                   {ragLabel}
                 </span>
               </div>
 
-              <div className="flex items-baseline gap-1">
-                <span style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-2px', color: score !== null ? ragColor : 'var(--text-3)', lineHeight: 1 }}>
+              {/* Score with gradient text */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, marginBottom: 12 }}>
+                <span style={{
+                  fontSize: 40, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em',
+                  background: `linear-gradient(135deg, #ffffff 0%, ${ragColor} 100%)`,
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}>
                   {score !== null ? Math.round(score) : '—'}
                 </span>
-                {score !== null && <span className="text-sm font-semibold" style={{ color: 'var(--text-3)' }}>/100</span>}
+                {score !== null && (
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 4 }}>/100</span>
+                )}
               </div>
 
-              <div className="rounded-full overflow-hidden" style={{ height: 4, background: 'rgba(255,255,255,0.06)' }}>
-                <div className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${score ?? 0}%`, background: ragColor }} />
+              {/* Progress bar */}
+              <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 10 }}>
+                <div style={{
+                  height: '100%', borderRadius: 999,
+                  width: `${score ?? 0}%`,
+                  background: `linear-gradient(90deg, ${ragColor}80, ${ragColor})`,
+                  transition: 'width 700ms cubic-bezier(0.34,1.56,0.64,1)',
+                }} />
               </div>
 
-              <div className="text-[10px]" style={{ color: 'var(--text-3)' }}>
+              {/* Shift info */}
+              <div style={{ fontSize: 10, color: '#475569' }}>
                 {s.last_shift
                   ? `${s.last_shift.shift_type === 'day' ? '☀' : '🌙'} ${s.last_shift.shift_type} · ${s.last_shift.date}`
                   : 'No shift data yet'}

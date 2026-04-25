@@ -20,55 +20,79 @@ const TODAY = new Date().toISOString().split('T')[0]
 function KpiTile({ metric, data, latest }) {
   const val = latest?.value
   const { target, higher, unit } = metric
+  const [hovered, setHovered] = useState(false)
   let rag = 'grey'
   if (val !== undefined) {
     const r = higher ? val / target : target / val
     rag = r >= 0.98 ? 'green' : r >= 0.93 ? 'amber' : 'red'
   }
-  const color = { green: '#4ade80', amber: '#fb923c', red: '#f87171', grey: '#6b7280' }[rag]
+  const RAG = {
+    green: { color: '#22C55E', glow: 'rgba(34,197,94,0.18)', border: 'rgba(34,197,94,0.28)', bg: 'rgba(34,197,94,0.09)', label: 'On Target', gradient: 'linear-gradient(135deg,#fff 0%,#22C55E 100%)' },
+    amber: { color: '#F59E0B', glow: 'rgba(245,158,11,0.18)', border: 'rgba(245,158,11,0.28)', bg: 'rgba(245,158,11,0.09)', label: 'At Risk',   gradient: 'linear-gradient(135deg,#fff 0%,#F59E0B 100%)' },
+    red:   { color: '#EF4444', glow: 'rgba(239,68,68,0.18)',  border: 'rgba(239,68,68,0.28)',  bg: 'rgba(239,68,68,0.09)',  label: 'Off Target', gradient: 'linear-gradient(135deg,#fff 0%,#EF4444 100%)' },
+    grey:  { color: '#94A3B8', glow: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.2)', bg: 'rgba(148,163,184,0.06)', label: 'No Data',  gradient: 'linear-gradient(135deg,#fff 0%,#94A3B8 100%)' },
+  }[rag]
   const diff  = val !== undefined ? ((val - target) / target * 100) : null
   const chartData = data.slice(-14).map((d, i) => ({ i, v: d.value }))
   const spc = calcSPC(data.map(d => d.value))
 
   return (
-    <div className="card p-4">
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--text-3)' }}>{metric.label}</div>
-          <div className="flex items-baseline gap-1">
-            <span style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-1.5px', lineHeight: 1, color }}>
-              {val !== undefined ? val.toLocaleString() : '—'}
-            </span>
-            <span className="text-sm font-normal" style={{ color: 'var(--text-3)' }}>{unit}</span>
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          {spc?.hasSignal && (
-            <span className="signal-dot"><span className="w-2 h-2 rounded-full bg-red-500 relative z-10 block" /></span>
-          )}
-          {diff !== null && (
-            <span className="text-xs font-bold" style={{ color }}>{diff > 0 ? '+' : ''}{diff.toFixed(1)}%</span>
-          )}
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: `1px solid ${hovered ? RAG.border : 'rgba(255,255,255,0.07)'}`,
+        borderRadius: 16,
+        padding: '18px',
+        transition: 'all 220ms cubic-bezier(0.34,1.56,0.64,1)',
+        transform: hovered ? 'translateY(-3px) scale(1.01)' : 'translateY(0) scale(1)',
+        boxShadow: hovered ? `0 12px 40px ${RAG.glow}, 0 0 0 1px ${RAG.border}` : '0 4px 20px rgba(0,0,0,0.3)',
+      }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748B' }}>
+          {metric.label}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {spc?.hasSignal && <span className="signal-dot"><span style={{ width: 7, height: 7, borderRadius: '50%', background: '#EF4444', display: 'block', position: 'relative', zIndex: 10 }} /></span>}
+          <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 999, background: RAG.bg, color: RAG.color, border: `1px solid ${RAG.border}` }}>{RAG.label}</span>
         </div>
       </div>
-      {chartData.length > 1 && (
-        <div className="h-12 -mx-1">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              {spc && <ReferenceLine y={spc.ucl} stroke="rgba(220,38,38,0.3)" strokeDasharray="3 2" strokeWidth={1} />}
-              {spc && <ReferenceLine y={Math.max(spc.lcl, 0)} stroke="rgba(220,38,38,0.3)" strokeDasharray="3 2" strokeWidth={1} />}
-              <ReferenceLine y={target} stroke="rgba(255,255,255,0.1)" strokeDasharray="4 3" strokeWidth={1} />
-              <Tooltip
-                contentStyle={{ fontSize: 10, borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: '#1C2035', color: '#E4E6F0', padding: '3px 7px' }}
-                formatter={v => [`${v}${unit}`, metric.label]} labelFormatter={() => ''} />
-              <Line type="monotone" dataKey="v" stroke={color} strokeWidth={2}
-                dot={false} activeDot={{ r: 3, fill: color, stroke: '#161A26', strokeWidth: 1.5 }} isAnimationActive={false} />
-            </LineChart>
-          </ResponsiveContainer>
+      {/* Value */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{
+            fontSize: 40, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em',
+            background: RAG.gradient,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
+            {val !== undefined ? val.toLocaleString() : '—'}
+            {unit && val !== undefined && <span style={{ fontSize: 18, fontWeight: 500, opacity: 0.65 }}>{unit}</span>}
+          </div>
+          {diff !== null && (
+            <div style={{ fontSize: 11, marginTop: 4, fontWeight: 600, color: (diff > 0) === higher ? '#22C55E' : '#EF4444' }}>
+              {diff > 0 ? '+' : ''}{diff.toFixed(1)}% vs target
+            </div>
+          )}
         </div>
-      )}
-      <div className="mt-2 text-[10px]" style={{ color: 'var(--text-3)' }}>
-        Target {target}{unit} · {data.length} pts
+        {chartData.length > 1 && (
+          <div style={{ width: 64, height: 36, flexShrink: 0 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <Line type="monotone" dataKey="v" stroke={RAG.color} strokeWidth={2} dot={false} isAnimationActive={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+      {/* Footer */}
+      <div style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: 10, color: '#475569', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Target: {target}{unit}</span>
+        {rag !== 'grey' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: RAG.color, boxShadow: `0 0 6px ${RAG.color}`, display: 'inline-block' }} />}
       </div>
     </div>
   )

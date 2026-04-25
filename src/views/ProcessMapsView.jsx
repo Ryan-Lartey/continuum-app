@@ -727,62 +727,77 @@ function ProcessMapBuilder(props) {
 function ProcessMapsList({ maps, onNew, onEdit, onDelete }) {
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: TEXT1, margin: 0 }}>Process Maps</h1>
-          <p style={{ fontSize: 12, color: TEXT3, margin: '3px 0 0' }}>
-            {maps.length} map{maps.length !== 1 ? 's' : ''} saved
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1)', margin: 0, letterSpacing: '-0.03em' }}>Process Maps</h1>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 0' }}>
+            {maps.length} map{maps.length !== 1 ? 's' : ''} · Swimlane process flows
           </p>
         </div>
         <button onClick={onNew} style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          padding: '9px 18px', borderRadius: 10,
-          background: ORANGE, color: '#fff',
-          border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(249,115,22,0.25)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 20px', borderRadius: 12,
+          background: 'linear-gradient(135deg, #F97316 0%, #E8820C 100%)',
+          boxShadow: '0 4px 20px rgba(249,115,22,0.32)',
+          color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
         }}>
-          <Plus size={14} /> New Map
+          + New Map
         </button>
       </div>
 
       {maps.length === 0 ? (
         <div style={{
           textAlign: 'center', padding: '64px 32px',
-          border: `2px dashed ${BORDER}`, borderRadius: 16,
-          color: TEXT3,
+          background: 'rgba(255,255,255,0.03)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: '1px dashed rgba(255,255,255,0.1)',
+          borderRadius: 16,
         }}>
-          <GitFork size={32} style={{ opacity: 0.3, marginBottom: 12, marginLeft: 'auto', marginRight: 'auto' }} />
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>No process maps yet</div>
-          <div style={{ fontSize: 12 }}>Create a swimlane process flow to document your operations</div>
+          <div style={{ fontSize: 36, opacity: 0.2, marginBottom: 12 }}>⑂</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>No process maps yet</div>
+          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 20 }}>
+            Create a swimlane process flow to document your operations
+          </div>
           <button onClick={onNew} style={{
-            marginTop: 18, padding: '9px 22px', borderRadius: 10,
-            background: ORANGE, color: '#fff',
-            border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            padding: '10px 24px', borderRadius: 12,
+            background: 'linear-gradient(135deg, #F97316 0%, #E8820C 100%)',
+            color: '#fff', border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(249,115,22,0.3)',
           }}>Create First Map</button>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: 16,
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
           {maps.map(m => (
-            <div key={m.id} style={{
-              background: '#fff',
-              border: `1px solid ${BORDER}`,
-              borderRadius: 12,
-              padding: '16px 18px',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-              display: 'flex', flexDirection: 'column', gap: 8,
-            }}>
+            <div key={m.id}
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderTop: `3px solid ${ORANGE}`,
+                borderRadius: 14,
+                padding: '18px',
+                display: 'flex', flexDirection: 'column', gap: 12,
+                transition: 'all 200ms cubic-bezier(0.34,1.56,0.64,1)',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 10px 32px rgba(0,0,0,0.4)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'none'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TEXT1 }}>{m.title}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', letterSpacing: '-0.01em' }}>{m.title}</div>
                   {m.description && (
-                    <div style={{ fontSize: 11, color: TEXT3, marginTop: 3, lineHeight: 1.4 }}>{m.description}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3, lineHeight: 1.4 }}>{m.description}</div>
                   )}
                 </div>
-                <GitFork size={16} style={{ color: ORANGE, flexShrink: 0, marginTop: 2 }} />
+                <GitFork size={16} style={{ color: ORANGE, flexShrink: 0, marginTop: 2, opacity: 0.6 }} />
               </div>
 
               {/* Lane tags */}
@@ -790,30 +805,36 @@ function ProcessMapsList({ maps, onNew, onEdit, onDelete }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   {m.swimlanes.map(l => (
                     <span key={l.id} style={{
-                      fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
-                      background: l.color, color: TEXT3,
-                      border: `1px solid ${BORDER}`,
+                      fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
+                      background: l.color || 'rgba(255,255,255,0.06)',
+                      color: 'var(--text-3)',
+                      border: '1px solid rgba(255,255,255,0.08)',
                       letterSpacing: '0.06em',
                     }}>{l.label}</span>
                   ))}
                 </div>
               )}
 
-              <div style={{ fontSize: 10, color: TEXT3 }}>
-                {m.nodes?.length || 0} nodes · {m.edges?.length || 0} connections ·{' '}
-                {new Date(m.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              <div style={{ fontSize: 10, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>{m.nodes?.length || 0} nodes</span>
+                <span style={{ opacity: 0.3 }}>·</span>
+                <span>{m.edges?.length || 0} connections</span>
+                <span style={{ opacity: 0.3 }}>·</span>
+                <span>{new Date(m.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
               </div>
 
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => onEdit(m)} style={{
-                  flex: 1, padding: '7px', borderRadius: 8,
-                  background: NAVY2, color: '#fff',
-                  border: 'none', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                }}>Edit</button>
+                  flex: 1, padding: '8px', borderRadius: 10,
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: 'var(--text-1)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                }}>Edit Map</button>
                 <button onClick={() => onDelete(m)} style={{
-                  padding: '7px 10px', borderRadius: 8,
-                  background: '#fff', color: '#DC2626',
-                  border: `1px solid #FCA5A5`, fontSize: 11, cursor: 'pointer',
+                  padding: '8px 12px', borderRadius: 10,
+                  background: 'rgba(239,68,68,0.08)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  color: '#f87171', fontSize: 11, cursor: 'pointer',
                 }}><Trash2 size={12} /></button>
               </div>
             </div>

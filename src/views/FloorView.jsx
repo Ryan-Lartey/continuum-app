@@ -274,20 +274,113 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
   const topWaste  = Object.entries(byWaste).sort((a, b) => b[1] - a[1]).slice(0, 5)
   const todayObs  = observations.filter(o => o.date === new Date().toISOString().split('T')[0])
 
+  // ─── Area stat cards derived from today's observations ───
+  const AREA_KEYS = ['Inbound', 'Stow', 'Pick', 'Pack', 'Dispatch', 'Yard']
+  const areaStats = AREA_KEYS.map(areaName => {
+    const areaObs  = todayObs.filter(o => o.area === areaName)
+    const weekObs  = last7.filter(o => o.area === areaName)
+    const hasRed   = areaObs.some(o => o.severity >= 3) || weekObs.length >= 4
+    const hasAmber = areaObs.some(o => o.severity >= 2) || weekObs.length >= 2
+    const status   = hasRed ? 'behind' : hasAmber ? 'at-risk' : 'on-track'
+    const statusLabel = hasRed ? 'BEHIND' : hasAmber ? 'WATCH' : 'ON TRACK'
+    const statusColor = hasRed ? '#EF4444' : hasAmber ? '#F59E0B' : '#22C55E'
+    const topWasteArea = Object.entries(
+      weekObs.reduce((acc, o) => { acc[o.waste_type] = (acc[o.waste_type] || 0) + 1; return acc }, {})
+    ).sort((a, b) => b[1] - a[1])[0]
+
+    return { areaName, areaObs, weekObs, status, statusLabel, statusColor, topWasteArea }
+  })
+
   return (
     <div className="max-w-[1400px]">
+
+      {/* ─── Header ─── */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>Floor Walk</h1>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)', letterSpacing: '-0.04em' }}>Floor Walk</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>
-            {todayObs.length} today · {last7.length} this week · {observations.length} total
+            {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+            <span className="mx-2" style={{ color: 'var(--border2)' }}>·</span>
+            {todayObs.length} obs today · {last7.length} this week
           </p>
         </div>
-        <button onClick={() => onOpenAgent('gemba-agent', null)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-          style={{ background: 'rgba(22,163,74,0.12)', color: '#4ade80' }}>
-          ◎ Gemba Agent
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => onOpenAgent('gemba-agent', null)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
+            style={{ background: 'rgba(34,197,94,0.1)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.2)' }}>
+            ◎ Gemba Agent
+          </button>
+          <button
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white btn-primary">
+            ▶ Start Walk
+          </button>
+        </div>
+      </div>
+
+      {/* ─── Area stat cards ─── */}
+      <div className="flex gap-3 mb-5" style={{ overflowX: 'auto', paddingBottom: 2 }}>
+        {areaStats.map(({ areaName, areaObs, weekObs, status, statusLabel, statusColor, topWasteArea }, idx) => (
+          <div key={areaName}
+            className={`area-stat-card ${status}`}
+            style={{
+              animationDelay: `${idx * 60}ms`,
+              animation: 'fadeIn 0.3s ease both',
+            }}>
+            {/* Area name + status badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B' }}>
+                {areaName}
+              </span>
+              <span style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: '0.08em',
+                padding: '2px 7px', borderRadius: 999,
+                background: `${statusColor}15`, color: statusColor,
+                border: `1px solid ${statusColor}30`,
+              }}>
+                {statusLabel}
+              </span>
+            </div>
+
+            {/* Main stat: today's obs count */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Today</div>
+                <div style={{
+                  fontSize: 32, fontWeight: 800, lineHeight: 1,
+                  letterSpacing: '-0.03em',
+                  background: areaObs.length > 0
+                    ? `linear-gradient(135deg, #fff 0%, ${statusColor} 100%)`
+                    : 'linear-gradient(135deg, #fff 0%, #475569 100%)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}>
+                  {areaObs.length}
+                </div>
+              </div>
+              <div style={{ paddingBottom: 4 }}>
+                <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Week</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: weekObs.length > 3 ? '#F59E0B' : '#64748B', lineHeight: 1 }}>
+                  {weekObs.length}
+                </div>
+              </div>
+            </div>
+
+            {/* Top waste tag */}
+            {topWasteArea ? (
+              <div style={{
+                fontSize: 10, fontWeight: 600,
+                padding: '3px 8px', borderRadius: 6,
+                background: 'rgba(255,255,255,0.04)',
+                color: '#64748B',
+                border: '1px solid rgba(255,255,255,0.06)',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {topWasteArea[0]} ×{topWasteArea[1]}
+              </div>
+            ) : (
+              <div style={{ fontSize: 10, color: '#334155', fontWeight: 500 }}>No observations</div>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Pattern alerts */}
@@ -295,13 +388,14 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
         <div className="flex gap-3 mb-4 flex-wrap">
           {patterns.map(p => (
             <div key={p.waste_type} className="flex items-center gap-3 px-4 py-2.5 rounded-xl border"
-              style={{ background: 'rgba(220,38,38,0.08)', borderColor: 'rgba(220,38,38,0.2)' }}>
-              <span style={{ color: '#f87171' }}>⚠</span>
+              style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.2)', borderLeft: '3px solid #EF4444' }}>
+              <span style={{ color: '#EF4444', fontSize: 16 }}>⚡</span>
               <div>
                 <span className="font-semibold text-sm" style={{ color: '#f87171' }}>{p.waste_type}</span>
                 <span className="text-xs ml-1.5" style={{ color: '#fca5a5' }}>{p.area}</span>
-                <span className="text-xs ml-2" style={{ color: '#fca5a5' }}>{p.count}× this week</span>
+                <span className="text-xs ml-2 font-bold" style={{ color: '#f87171' }}>{p.count}× this week</span>
               </div>
+              <span className="text-xs ml-auto" style={{ color: '#94A3B8' }}>Pattern detected</span>
             </div>
           ))}
         </div>

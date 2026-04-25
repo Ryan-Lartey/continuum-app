@@ -81,39 +81,75 @@ export default function PortfolioListView({ onOpenPortfolio }) {
   const activePortfolios = portfolios.filter(p => p.status === 'active')
 
   return (
-    <div className="flex gap-6 max-w-[1400px]">
+    <div style={{ display: 'flex', gap: 24, maxWidth: 1400 }}>
 
       {/* ── Left: portfolio list ── */}
-      <div className="flex-1 min-w-0">
+      <div style={{ flex: 1, minWidth: 0 }}>
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)', letterSpacing: '-0.03em' }}>Portfolio</h1>
-            <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '-0.03em', margin: 0 }}>Portfolio</h1>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 0' }}>
               CI improvement pipelines — from raw idea to finished project
             </p>
           </div>
           <button onClick={() => setShowNew(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold text-white"
-            style={{ background: 'var(--accent)' }}>
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 20px', borderRadius: 12,
+              background: 'linear-gradient(135deg, #F97316 0%, #E8820C 100%)',
+              boxShadow: '0 4px 20px rgba(249,115,22,0.32)',
+              border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            }}>
             + Add Portfolio
           </button>
         </div>
 
+        {/* Hero summary bar */}
+        {portfolios.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+            {[
+              { label: 'Portfolios', value: activePortfolios.length, color: '#E8820C' },
+              { label: 'Total Ideas', value: totalIdeas, color: '#3B7FDE' },
+              { label: 'Active Projects', value: totalActive, color: '#16A34A' },
+              { label: 'Completed', value: totalDoneAll, color: '#a78bfa' },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{
+                background: 'rgba(255,255,255,0.04)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 12,
+                padding: '12px 16px',
+              }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B', marginBottom: 4 }}>{label}</div>
+                <div style={{
+                  fontSize: 28, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em',
+                  background: `linear-gradient(135deg, #ffffff 0%, ${color} 100%)`,
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Tabs */}
-        <div className="flex gap-0 mb-5 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
           {[['active', 'Active'], ['archived', 'Archived']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)}
-              className="px-4 py-2 text-sm font-medium relative"
               style={{
+                padding: '8px 16px', fontSize: 13, fontWeight: 600,
                 color: tab === id ? 'var(--text-1)' : 'var(--text-3)',
+                background: 'none', border: 'none', cursor: 'pointer',
                 borderBottom: tab === id ? '2px solid var(--accent)' : '2px solid transparent',
                 marginBottom: -1,
               }}>
               {label}
               {id === 'active' && activePortfolios.length > 0 && (
-                <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded"
-                  style={{ background: 'rgba(249,115,22,0.12)', color: 'var(--accent)' }}>
+                <span style={{
+                  marginLeft: 7, fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 999,
+                  background: 'rgba(249,115,22,0.12)', color: 'var(--accent)',
+                }}>
                   {activePortfolios.length}
                 </span>
               )}
@@ -123,20 +159,32 @@ export default function PortfolioListView({ onOpenPortfolio }) {
 
         {/* Portfolio cards */}
         {shown.length === 0 ? (
-          <div className="card p-14 text-center">
-            <div className="text-base font-semibold mb-2" style={{ color: 'var(--text-2)' }}>No portfolios yet</div>
-            <p className="text-sm mb-5" style={{ color: 'var(--text-3)' }}>
+          <div style={{
+            textAlign: 'center', padding: '56px 32px',
+            background: 'rgba(255,255,255,0.03)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px dashed rgba(255,255,255,0.1)',
+            borderRadius: 16,
+          }}>
+            <div style={{ fontSize: 32, opacity: 0.2, marginBottom: 12 }}>◈</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6 }}>No portfolios yet</div>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6, maxWidth: 360, margin: '0 auto 20px' }}>
               A portfolio groups CI projects under one strategic objective.<br />
               Create one per area — e.g. Pick Efficiency, Quality, Safety.
             </p>
             <button onClick={() => setShowNew(true)}
-              className="px-5 py-2.5 rounded text-sm font-semibold text-white"
-              style={{ background: 'var(--accent)' }}>
+              style={{
+                padding: '10px 24px', borderRadius: 12,
+                background: 'linear-gradient(135deg, #F97316 0%, #E8820C 100%)',
+                border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                boxShadow: '0 4px 16px rgba(249,115,22,0.3)',
+              }}>
               Create your first portfolio →
             </button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {shown.map(p => {
               const s = summaries[p.id]
               const areaColor = AREA_COLORS[p.area_focus] || '#6B7280'
@@ -144,99 +192,152 @@ export default function PortfolioListView({ onOpenPortfolio }) {
               const pct = totalAll > 0 ? Math.round(((s?.finishedCount || 0) / totalAll) * 100) : 0
 
               return (
-                <div key={p.id} className="card cursor-pointer group relative"
-                  style={{ transition: 'border-color 0.12s' }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = `${areaColor}40`}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-                  onClick={() => { if (menuOpen === p.id) return; onOpenPortfolio(p) }}>
-                  <div className="flex items-center gap-4 px-4 py-3.5">
+                <div key={p.id}
+                  onClick={() => { if (menuOpen === p.id) return; onOpenPortfolio(p) }}
+                  style={{
+                    position: 'relative',
+                    background: 'rgba(255,255,255,0.04)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderTop: `3px solid ${areaColor}`,
+                    borderRadius: 14,
+                    padding: 18,
+                    cursor: 'pointer',
+                    transition: 'all 200ms cubic-bezier(0.34,1.56,0.64,1)',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'translateY(-3px)'
+                    e.currentTarget.style.boxShadow = `0 12px 36px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1)`
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  {/* Top row: tags + ring */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999,
+                        background: `${areaColor}18`, color: areaColor,
+                        border: `1px solid ${areaColor}30`,
+                      }}>{p.area_focus}</span>
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 999,
+                        background: 'rgba(255,255,255,0.06)', color: '#64748B',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                      }}>{KPI_LABELS[p.primary_kpi] || p.primary_kpi}</span>
+                    </div>
                     {/* Progress ring */}
-                    <div className="flex-shrink-0 relative w-9 h-9">
-                      <svg viewBox="0 0 36 36" className="w-9 h-9 -rotate-90">
-                        <circle cx="18" cy="18" r="13" fill="none" strokeWidth="2.5" stroke="var(--bg-input)" />
-                        <circle cx="18" cy="18" r="13" fill="none" strokeWidth="2.5"
+                    <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0 }}>
+                      <svg viewBox="0 0 44 44" style={{ width: 44, height: 44, transform: 'rotate(-90deg)' }}>
+                        <circle cx="22" cy="22" r="16" fill="none" strokeWidth="3" stroke="rgba(255,255,255,0.06)" />
+                        <circle cx="22" cy="22" r="16" fill="none" strokeWidth="3"
                           stroke={areaColor} strokeLinecap="round"
-                          strokeDasharray={`${pct * 0.817} 81.7`} />
+                          strokeDasharray={`${(pct / 100) * 100.53} 100.53`} />
                       </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span style={{ fontSize: 8, fontWeight: 700, color: areaColor }}>{pct}%</span>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, color: areaColor }}>{pct}%</span>
                       </div>
                     </div>
+                  </div>
 
-                    {/* Name + tags */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>{p.name}</span>
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                          style={{ background: `${areaColor}15`, color: areaColor }}>
-                          {p.area_focus}
-                        </span>
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded"
-                          style={{ background: 'var(--bg-input)', color: 'var(--text-3)' }}>
-                          {KPI_LABELS[p.primary_kpi] || p.primary_kpi}
-                        </span>
-                      </div>
-                      {/* Pipeline bar */}
-                      {s ? (
-                        <div className="flex items-center gap-3">
-                          {[
-                            ['Ideas', s.ideaCount, 'var(--text-3)'],
-                            ['Scoping', s.definitionCount + s.validationCount, '#8b5cf6'],
-                            ['Active', s.assignedCount, '#16a34a'],
-                            ['Done', s.finishedCount, '#4ade80'],
-                          ].map(([label, count, color]) => (
-                            <span key={label} className="text-xs" style={{ color: count > 0 ? color : 'var(--text-3)' }}>
-                              {count} {label}
-                            </span>
-                          ))}
-                          {s.pendingIdeas > 0 && (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                              style={{ background: 'rgba(249,115,22,0.1)', color: 'var(--accent)' }}>
-                              {s.pendingIdeas} pending review
-                            </span>
-                          )}
+                  {/* Name */}
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4, letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                    {p.name}
+                  </div>
+
+                  {/* Strategic objective */}
+                  {p.strategic_objective && (
+                    <div style={{
+                      fontSize: 11, color: '#64748B', marginBottom: 12, lineHeight: 1.5,
+                      overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                    }}>
+                      {p.strategic_objective}
+                    </div>
+                  )}
+
+                  {/* Pipeline pills */}
+                  {s ? (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: p.strategic_objective ? 0 : 12 }}>
+                      {[
+                        ['Ideas', s.ideaCount, '#64748B'],
+                        ['Scoping', (s.definitionCount || 0) + (s.validationCount || 0), '#8b5cf6'],
+                        ['Active', s.assignedCount, '#16A34A'],
+                        ['Done', s.finishedCount, '#4ade80'],
+                      ].map(([label, count, color]) => (
+                        <div key={label} style={{
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          fontSize: 10, fontWeight: 600,
+                          padding: '3px 8px', borderRadius: 999,
+                          background: count > 0 ? `${color}14` : 'rgba(255,255,255,0.04)',
+                          color: count > 0 ? color : '#374151',
+                          border: `1px solid ${count > 0 ? color + '25' : 'rgba(255,255,255,0.06)'}`,
+                        }}>
+                          <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 800 }}>{count}</span>
+                          <span style={{ opacity: 0.8 }}>{label}</span>
                         </div>
-                      ) : (
-                        <div className="h-2 w-32 rounded animate-pulse" style={{ background: 'var(--bg-input)' }} />
-                      )}
+                      ))}
                     </div>
+                  ) : (
+                    <div style={{ height: 24, width: 180, borderRadius: 999, background: 'rgba(255,255,255,0.06)' }} />
+                  )}
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ color: 'var(--accent)' }}>Open →</span>
-                      <div className="relative" onClick={e => e.stopPropagation()}>
-                        <button
-                          onClick={() => setMenuOpen(menuOpen === p.id ? null : p.id)}
-                          className="w-6 h-6 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 transition-opacity hover:opacity-100"
-                          style={{ color: 'var(--text-3)', background: 'var(--bg-input)' }}
-                          title="Options">
-                          ⋯
-                        </button>
-                        {menuOpen === p.id && (
-                          <div className="absolute right-0 top-8 z-20 w-36 rounded-xl shadow-xl border overflow-hidden"
-                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border2)' }}>
-                            {tab === 'active' ? (
-                              <button onClick={() => archivePortfolio(p.id)}
-                                className="w-full text-left px-3 py-2.5 text-xs font-medium hover:opacity-80 flex items-center gap-2"
-                                style={{ color: 'var(--text-2)' }}>
-                                📦 Archive
-                              </button>
-                            ) : (
-                              <button onClick={() => unarchivePortfolio(p.id)}
-                                className="w-full text-left px-3 py-2.5 text-xs font-medium hover:opacity-80 flex items-center gap-2"
-                                style={{ color: 'var(--text-2)' }}>
-                                ↩ Restore
-                              </button>
-                            )}
-                            <div style={{ height: 1, background: 'var(--border)' }} />
-                            <button onClick={() => deletePortfolio(p.id)}
-                              className="w-full text-left px-3 py-2.5 text-xs font-medium hover:opacity-80 flex items-center gap-2"
-                              style={{ color: '#f87171' }}>
-                              🗑 Delete
+                  {/* Footer: pending badge + context menu */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                    {s?.pendingIdeas > 0 ? (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 999,
+                        background: 'rgba(249,115,22,0.12)', color: '#F97316',
+                        border: '1px solid rgba(249,115,22,0.2)',
+                      }}>
+                        {s.pendingIdeas} pending review
+                      </span>
+                    ) : <span />}
+                    <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => setMenuOpen(menuOpen === p.id ? null : p.id)}
+                        style={{
+                          width: 28, height: 28, borderRadius: 8,
+                          background: 'rgba(255,255,255,0.06)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: '#64748B', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 16, lineHeight: 1,
+                        }}
+                        title="Options">
+                        ⋯
+                      </button>
+                      {menuOpen === p.id && (
+                        <div style={{
+                          position: 'absolute', right: 0, top: 34, zIndex: 20,
+                          width: 144, borderRadius: 12,
+                          background: 'rgba(22,26,38,0.96)',
+                          backdropFilter: 'blur(20px)',
+                          WebkitBackdropFilter: 'blur(20px)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                          overflow: 'hidden',
+                        }}>
+                          {tab === 'active' ? (
+                            <button onClick={() => archivePortfolio(p.id)}
+                              style={{ width: '100%', textAlign: 'left', padding: '10px 14px', fontSize: 12, fontWeight: 500, background: 'none', border: 'none', color: '#CBD5E1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              📦 Archive
                             </button>
-                          </div>
-                        )}
-                      </div>
+                          ) : (
+                            <button onClick={() => unarchivePortfolio(p.id)}
+                              style={{ width: '100%', textAlign: 'left', padding: '10px 14px', fontSize: 12, fontWeight: 500, background: 'none', border: 'none', color: '#CBD5E1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              ↩ Restore
+                            </button>
+                          )}
+                          <div style={{ height: 1, background: 'rgba(255,255,255,0.07)' }} />
+                          <button onClick={() => deletePortfolio(p.id)}
+                            style={{ width: '100%', textAlign: 'left', padding: '10px 14px', fontSize: 12, fontWeight: 500, background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            🗑 Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -248,30 +349,31 @@ export default function PortfolioListView({ onOpenPortfolio }) {
 
       {/* ── Right: pipeline summary ── */}
       {activePortfolios.length > 0 && (
-        <div className="w-64 flex-shrink-0 space-y-3 pt-14">
+        <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
           {/* Pipeline funnel */}
-          <div className="card p-4">
-            <div className="text-[10px] font-semibold uppercase tracking-widest mb-4"
-              style={{ color: 'var(--text-3)', letterSpacing: '0.08em' }}>Pipeline</div>
-            <div className="space-y-2.5">
+          <div style={{
+            background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 16,
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B', marginBottom: 14 }}>Pipeline</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                { label: 'Pending Review', value: totalPending,  color: 'var(--accent)' },
-                { label: 'Scoping',        value: totalScoping,  color: '#8b5cf6' },
-                { label: 'Active Projects',value: totalActive,   color: '#16a34a' },
-                { label: 'Completed',      value: totalDoneAll,  color: '#4ade80' },
+                { label: 'Pending Review', value: totalPending, color: '#F97316' },
+                { label: 'Scoping', value: totalScoping, color: '#8b5cf6' },
+                { label: 'Active Projects', value: totalActive, color: '#16A34A' },
+                { label: 'Completed', value: totalDoneAll, color: '#4ade80' },
               ].map(({ label, value, color }) => {
                 const maxVal = Math.max(totalPending, totalScoping, totalActive, totalDoneAll, 1)
                 const barW = Math.round((value / maxVal) * 100)
                 return (
                   <div key={label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs" style={{ color: 'var(--text-3)' }}>{label}</span>
-                      <span className="text-xs font-semibold tabular-nums" style={{ color: value > 0 ? color : 'var(--text-3)' }}>{value}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: '#94A3B8' }}>{label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: value > 0 ? color : '#475569', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
                     </div>
-                    <div className="h-1 rounded-full" style={{ background: 'var(--bg-input)' }}>
-                      <div className="h-1 rounded-full transition-all duration-500"
-                        style={{ width: `${barW}%`, background: value > 0 ? color : 'transparent' }} />
+                    <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', borderRadius: 999, width: `${barW}%`, background: value > 0 ? color : 'transparent', transition: 'width 600ms cubic-bezier(0.34,1.56,0.64,1)' }} />
                     </div>
                   </div>
                 )
@@ -279,26 +381,28 @@ export default function PortfolioListView({ onOpenPortfolio }) {
             </div>
           </div>
 
-          {/* Portfolios breakdown */}
-          <div className="card p-4">
-            <div className="text-[10px] font-semibold uppercase tracking-widest mb-3"
-              style={{ color: 'var(--text-3)', letterSpacing: '0.08em' }}>By Portfolio</div>
-            <div className="space-y-2">
+          {/* By Portfolio */}
+          <div style={{
+            background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 16,
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B', marginBottom: 12 }}>By Portfolio</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {activePortfolios.map(p => {
                 const s = summaries[p.id]
                 const areaColor = AREA_COLORS[p.area_focus] || '#6B7280'
                 const total = s?.totalIdeas || 0
-                const done  = s?.finishedCount || 0
-                const pct   = total > 0 ? Math.round((done / total) * 100) : 0
+                const done = s?.finishedCount || 0
+                const pct = total > 0 ? Math.round((done / total) * 100) : 0
                 return (
                   <button key={p.id} onClick={() => onOpenPortfolio(p)}
-                    className="w-full text-left hover:opacity-80 transition-opacity">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs truncate" style={{ color: 'var(--text-2)', maxWidth: 140 }}>{p.name}</span>
-                      <span className="text-[10px] font-semibold tabular-nums" style={{ color: areaColor }}>{pct}%</span>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                      <span style={{ fontSize: 11, color: '#94A3B8', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: areaColor, fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
                     </div>
-                    <div className="h-0.5 rounded-full" style={{ background: 'var(--bg-input)' }}>
-                      <div className="h-0.5 rounded-full" style={{ width: `${pct}%`, background: areaColor }} />
+                    <div style={{ height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.06)' }}>
+                      <div style={{ height: '100%', borderRadius: 999, width: `${pct}%`, background: areaColor }} />
                     </div>
                   </button>
                 )
@@ -306,13 +410,20 @@ export default function PortfolioListView({ onOpenPortfolio }) {
             </div>
           </div>
 
-          <div className="card p-4">
-            <div className="text-[10px] font-semibold uppercase tracking-widest mb-3"
-              style={{ color: 'var(--text-3)', letterSpacing: '0.08em' }}>Total Ideas</div>
-            <div className="text-3xl font-bold" style={{ color: 'var(--text-1)', letterSpacing: '-0.04em' }}>
+          {/* Total Ideas */}
+          <div style={{
+            background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 16,
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B', marginBottom: 8 }}>Total Ideas</div>
+            <div style={{
+              fontSize: 36, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1,
+              background: 'linear-gradient(135deg, #ffffff 0%, #3B7FDE 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+            }}>
               {allSummaries.reduce((n, s) => n + (s?.totalIdeas || 0), 0)}
             </div>
-            <div className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
+            <div style={{ fontSize: 11, marginTop: 4, color: '#64748B' }}>
               across {activePortfolios.length} portfolio{activePortfolios.length !== 1 ? 's' : ''}
             </div>
           </div>

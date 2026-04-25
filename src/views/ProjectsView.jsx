@@ -16,6 +16,13 @@ const TYPE_COLORS = { 'Quick Win': '#16A34A', 'Yellow Belt': '#CA8A04', 'Green B
 
 const STAGE_ORDER = ['Define', 'Measure', 'Analyse', 'Improve', 'Control', 'Closed']
 
+const KANBAN_COLS = [
+  { id: 'Define',  label: 'Backlog',     color: '#3B7FDE', bg: 'rgba(59,127,222,0.08)'  },
+  { id: 'Measure', label: 'In Progress', color: '#F59E0B', bg: 'rgba(245,158,11,0.08)'  },
+  { id: 'Analyse', label: 'Review',      color: '#a78bfa', bg: 'rgba(167,139,250,0.08)' },
+  { id: 'Improve', label: 'Complete',    color: '#22C55E', bg: 'rgba(34,197,94,0.08)'   },
+]
+
 export default function ProjectsView({ openProject, onOpenAgent, onOpenPortfolio, onNavigate, demoMode }) {
   const [projects, setProjects]         = useState([])
   const [portfolios, setPortfolios]     = useState([])
@@ -24,6 +31,7 @@ export default function ProjectsView({ openProject, onOpenAgent, onOpenPortfolio
   const [sortBy, setSortBy]             = useState('updated')
   const [selected, setSelected]         = useState(openProject || null)
   const [search, setSearch]             = useState('')
+  const [viewMode, setViewMode]         = useState('list') // 'list' | 'kanban'
 
   useEffect(() => { loadProjects() }, [])
   useEffect(() => {
@@ -67,6 +75,172 @@ export default function ProjectsView({ openProject, onOpenAgent, onOpenPortfolio
   const activeCount = projects.filter(p => p.stage !== 'Closed').length
   const inputStyle = { background: 'var(--bg-input)', borderColor: 'var(--border2)', color: 'var(--text-1)' }
 
+  // Kanban view
+  if (viewMode === 'kanban' && !selected) {
+    return (
+      <div className="max-w-[1400px] flex flex-col h-[calc(100vh-48px)]">
+        {/* Kanban header */}
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)', letterSpacing: '-0.04em' }}>Projects</h1>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>{activeCount} active · {projects.length} total</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Search */}
+            <div style={{ position: 'relative' }}>
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search…"
+                className="text-xs rounded-xl px-3 py-2 border"
+                style={{ ...inputStyle, width: 180, paddingLeft: 30 }} />
+              <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-3)', fontSize: 12 }}>⌕</span>
+            </div>
+            {/* View toggle */}
+            <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--border2)', background: 'var(--bg-input)' }}>
+              <button onClick={() => setViewMode('list')}
+                className="px-3 py-2 text-xs font-semibold"
+                style={{ background: viewMode === 'list' ? 'var(--bg-card)' : 'transparent', color: viewMode === 'list' ? 'var(--text-1)' : 'var(--text-3)' }}>
+                ≡ List
+              </button>
+              <button onClick={() => setViewMode('kanban')}
+                className="px-3 py-2 text-xs font-semibold"
+                style={{ background: viewMode === 'kanban' ? 'var(--bg-card)' : 'transparent', color: viewMode === 'kanban' ? 'var(--text-1)' : 'var(--text-3)' }}>
+                ⊞ Board
+              </button>
+            </div>
+            {/* Filter pills */}
+            <div className="flex gap-1">
+              {['All', 'My Projects', 'Overdue'].map(f => (
+                <button key={f} onClick={() => setFilter(f === 'All' ? 'All' : filter)}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                  style={{ background: 'var(--bg-input)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+                  {f}
+                </button>
+              ))}
+            </div>
+            {/* New Project CTA */}
+            <button className="btn-primary text-sm" onClick={() => onNavigate?.('portfolio')}>
+              + New Project
+            </button>
+          </div>
+        </div>
+
+        {/* Kanban columns */}
+        <div className="flex gap-4 flex-1 overflow-x-auto pb-4">
+          {KANBAN_COLS.map(col => {
+            const colProjects = filtered.filter(p =>
+              col.id === 'Define' ? ['Define', 'Identify'].includes(p.stage)
+              : col.id === 'Measure' ? ['Measure'].includes(p.stage)
+              : col.id === 'Analyse' ? ['Analyse'].includes(p.stage)
+              : ['Improve', 'Control'].includes(p.stage)
+            )
+            return (
+              <div key={col.id} style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                {/* Column header */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  marginBottom: 12, padding: '0 4px',
+                }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: col.color, boxShadow: `0 0 8px ${col.color}` }} />
+                  <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-1)', letterSpacing: '-0.01em' }}>{col.label}</span>
+                  <span style={{
+                    marginLeft: 'auto', fontSize: 10, fontWeight: 700,
+                    padding: '2px 8px', borderRadius: 999,
+                    background: col.bg, color: col.color,
+                  }}>{colProjects.length}</span>
+                </div>
+
+                {/* Cards */}
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 2 }}>
+                  {colProjects.length === 0 ? (
+                    <div style={{
+                      border: '1px dashed rgba(255,255,255,0.06)', borderRadius: 12,
+                      padding: '24px 16px', textAlign: 'center',
+                      color: 'var(--text-3)', fontSize: 12,
+                    }}>
+                      No projects
+                    </div>
+                  ) : colProjects.map(p => {
+                    const color   = STAGE_COLORS[p.stage] || '#6B7280'
+                    const done    = (p.actions || []).filter(a => a.done || a.status === 'Complete').length
+                    const total   = (p.actions || []).length
+                    const pct     = total > 0 ? Math.round(done / total * 100) : 0
+                    const portfolio = portfolios.find(pf => pf.id === p.portfolio_id)
+                    const dueDate = p.target_date || p.due_date
+                    const isOverdue = dueDate && dueDate < new Date().toISOString().split('T')[0]
+                    const initials = (p.owner || 'RY').slice(0, 2).toUpperCase()
+
+                    return (
+                      <div key={p.id} className="kanban-card" onClick={() => { setSelected(p); setViewMode('list') }}>
+                        {/* Stage badge */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                          <span style={{
+                            fontSize: 9, fontWeight: 800, letterSpacing: '0.08em',
+                            padding: '2px 7px', borderRadius: 4, textTransform: 'uppercase',
+                            background: `${color}18`, color,
+                          }}>{p.stage}</span>
+                          {portfolio && (
+                            <span style={{ fontSize: 10, color: '#E8820C', fontWeight: 600 }}>◈ {portfolio.name}</span>
+                          )}
+                        </div>
+
+                        {/* Title */}
+                        <p style={{
+                          fontSize: 13, fontWeight: 600, color: 'var(--text-1)',
+                          lineHeight: 1.35, marginBottom: 12,
+                        }}>{p.title}</p>
+
+                        {/* Progress bar */}
+                        {total > 0 && (
+                          <div style={{ marginBottom: 10 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <span style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>Progress</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: pct === 100 ? '#22C55E' : 'var(--text-2)' }}>{pct}%</span>
+                            </div>
+                            <div className="progress-bar">
+                              <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Footer */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          {/* Owner avatar */}
+                          <div style={{
+                            width: 26, height: 26, borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #f97316, #ea6c0a)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 10, fontWeight: 700, color: 'white',
+                            boxShadow: '0 2px 8px rgba(249,115,22,0.3)',
+                          }}>
+                            {initials}
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {dueDate && (
+                              <span style={{
+                                fontSize: 10, fontWeight: 600,
+                                padding: '2px 7px', borderRadius: 999,
+                                background: isOverdue ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
+                                color: isOverdue ? '#EF4444' : 'var(--text-3)',
+                                border: `1px solid ${isOverdue ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                              }}>
+                                {isOverdue ? '⚠' : '⊙'} {dueDate}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex gap-5 h-[calc(100vh-48px)] max-w-[1400px]">
 
@@ -76,6 +250,19 @@ export default function ProjectsView({ openProject, onOpenAgent, onOpenPortfolio
           <div>
             <h1 className="text-lg font-bold" style={{ color: 'var(--text-1)' }}>Projects</h1>
             <p className="text-xs" style={{ color: 'var(--text-3)' }}>{activeCount} active · {projects.length} total</p>
+          </div>
+          {/* View toggle */}
+          <div className="flex rounded-xl overflow-hidden" style={{ border: '1px solid var(--border2)', background: 'var(--bg-input)' }}>
+            <button onClick={() => setViewMode('list')}
+              className="px-2.5 py-1.5 text-[10px] font-semibold"
+              style={{ background: viewMode === 'list' ? 'var(--bg-card)' : 'transparent', color: viewMode === 'list' ? 'var(--text-1)' : 'var(--text-3)' }}>
+              ≡
+            </button>
+            <button onClick={() => { setSelected(null); setViewMode('kanban') }}
+              className="px-2.5 py-1.5 text-[10px] font-semibold"
+              style={{ background: viewMode === 'kanban' ? 'var(--bg-card)' : 'transparent', color: viewMode === 'kanban' ? 'var(--text-1)' : 'var(--text-3)' }}>
+              ⊞
+            </button>
           </div>
         </div>
 
