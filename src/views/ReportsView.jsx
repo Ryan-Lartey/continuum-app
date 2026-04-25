@@ -976,7 +976,6 @@ export default function ReportsView({ onOpenAgent, onNavigate, demoMode }) {
     { id: 'monthly',   label: '▣ Monthly Review' },
     { id: 'maturity',  label: '▲ Maturity'       },
     { id: 'a3',        label: '□ A3 Builder'     },
-    { id: 'maps',      label: '⬡ Map Library'    },
   ]
 
   const btnBase = 'px-4 py-2 rounded-xl text-sm font-semibold transition-all'

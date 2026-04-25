@@ -205,119 +205,141 @@ function Layer1AnnotationDot({ cx, cy, payload }) {
 const SECTION_COLORS = {
   inbound:  '#3B7FDE',
   icqa:     '#7C3AED',
+  outbound: '#0891B2',
   pick:     '#E8820C',
   pack:     '#16A34A',
-  outbound: '#0891B2',
+  slam:     '#DC2626',
+  sort:     '#059669',
+  loading:  '#D97706',
 }
 
-function SectionCards({ sections, selected, onSelect }) {
+const OUTBOUND_SUBS = [
+  { id: 'pick',    label: 'Pick'    },
+  { id: 'pack',    label: 'Pack'    },
+  { id: 'slam',    label: 'Slam'    },
+  { id: 'sort',    label: 'Sort'    },
+  { id: 'loading', label: 'Loading' },
+]
+
+function normalizeSections(raw) {
+  const byId = {}
+  for (const s of raw) byId[s.id] = s
+  return [
+    byId.inbound  || { id: 'inbound',  label: 'Inbound',  order: 1, score: null, score_status: 'no_data', last_shift: null },
+    byId.icqa     || { id: 'icqa',     label: 'ICQA',     order: 2, score: null, score_status: 'no_data', last_shift: null },
+    {
+      ...(byId.outbound || { id: 'outbound', label: 'Outbound', order: 3, score: null, score_status: 'no_data', last_shift: null }),
+      subsections: OUTBOUND_SUBS.map(sub => byId[sub.id] || { ...sub, score: null, score_status: 'no_data', last_shift: null }),
+    },
+  ]
+}
+
+function SectionCard({ s, selected, onSelect }) {
+  const [hovered, setHovered] = useState(false)
+  const score    = s.score
+  const color    = SECTION_COLORS[s.id] || '#6b7280'
+  const isActive = selected === s.id
+  const rag      = score === null ? 'grey' : score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red'
+  const ragColor = { green: '#22C55E', amber: '#F59E0B', red: '#EF4444', grey: '#94A3B8' }[rag]
+  const ragLabel = { green: 'Healthy', amber: 'Monitor', red: 'At Risk', grey: 'No data' }[rag]
+  const ragGlow  = { green: 'rgba(34,197,94,0.22)', amber: 'rgba(245,158,11,0.22)', red: 'rgba(239,68,68,0.22)', grey: 'rgba(148,163,184,0.08)' }[rag]
+  return (
+    <button onClick={() => onSelect(isActive ? null : s.id)}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      style={{
+        background: isActive ? `${color}0d` : 'rgba(255,255,255,0.04)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        border: `1px solid ${isActive ? color + '55' : hovered ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.07)'}`,
+        borderTop: `3px solid ${isActive ? color : hovered ? color + '70' : 'transparent'}`,
+        borderRadius: 14, padding: 20, textAlign: 'left', cursor: 'pointer',
+        transition: 'all 200ms cubic-bezier(0.34,1.56,0.64,1)',
+        transform: hovered && !isActive ? 'translateY(-2px)' : 'none',
+        boxShadow: isActive ? `0 8px 32px ${ragGlow}` : hovered ? '0 8px 28px rgba(0,0,0,0.35)' : '0 2px 12px rgba(0,0,0,0.2)',
+      }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: isActive ? color : '#64748B' }}>
+          {s.label}
+          {s.id === 'outbound' && <span style={{ marginLeft: 6, fontSize: 9, opacity: 0.6 }}>▸ Pick · Pack · Slam · Sort · Loading</span>}
+        </span>
+        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: `${ragColor}18`, color: ragColor, border: `1px solid ${ragColor}28` }}>{ragLabel}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, marginBottom: 14 }}>
+        <span style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', background: `linear-gradient(135deg, #ffffff 0%, ${ragColor} 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          {score !== null ? Math.round(score) : '—'}
+        </span>
+        {score !== null && <span style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 5 }}>/100</span>}
+      </div>
+      <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 10 }}>
+        <div style={{ height: '100%', borderRadius: 999, width: `${score ?? 0}%`, background: `linear-gradient(90deg, ${ragColor}80, ${ragColor})`, transition: 'width 700ms cubic-bezier(0.34,1.56,0.64,1)' }} />
+      </div>
+      <div style={{ fontSize: 10, color: '#475569' }}>
+        {s.last_shift ? `${s.last_shift.shift_type === 'day' ? '☀' : '🌙'} ${s.last_shift.shift_type} · ${s.last_shift.date}` : 'No shift data yet'}
+      </div>
+    </button>
+  )
+}
+
+function SectionCards({ sections, selected, onSelect, selectedSub, onSelectSub }) {
   const hour = new Date().getHours()
   const currentShift = (hour >= 6 && hour < 16) ? 'day' : (hour >= 20 || hour < 6) ? 'night' : null
-  const [hoveredId, setHoveredId] = useState(null)
+  const outbound = sections.find(s => s.id === 'outbound')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <p style={{ fontSize: 11, color: '#64748B', margin: 0 }}>
-          Select a section to view its metrics and performance
-        </p>
+        <p style={{ fontSize: 11, color: '#64748B', margin: 0 }}>Select a section to view its metrics and performance</p>
         {currentShift && (
-          <span style={{
-            padding: '3px 10px', borderRadius: 999, fontSize: 10, fontWeight: 700,
-            background: currentShift === 'day' ? 'rgba(232,130,12,0.12)' : 'rgba(59,127,222,0.12)',
-            color: currentShift === 'day' ? '#E8820C' : '#60a5fa',
-            border: `1px solid ${currentShift === 'day' ? 'rgba(232,130,12,0.25)' : 'rgba(59,127,222,0.25)'}`,
-          }}>
+          <span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 10, fontWeight: 700, background: currentShift === 'day' ? 'rgba(232,130,12,0.12)' : 'rgba(59,127,222,0.12)', color: currentShift === 'day' ? '#E8820C' : '#60a5fa', border: `1px solid ${currentShift === 'day' ? 'rgba(232,130,12,0.25)' : 'rgba(59,127,222,0.25)'}` }}>
             {currentShift === 'day' ? '☀ Day shift active' : '🌙 Night shift active'}
           </span>
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-        {sections.map(s => {
-          const score     = s.score
-          const color     = SECTION_COLORS[s.id] || '#6b7280'
-          const isActive  = selected === s.id
-          const isHovered = hoveredId === s.id
-          const rag       = score === null ? 'grey' : score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red'
-          const ragColor  = { green: '#22C55E', amber: '#F59E0B', red: '#EF4444', grey: '#94A3B8' }[rag]
-          const ragLabel  = { green: 'Healthy', amber: 'Monitor', red: 'At Risk', grey: 'No data' }[rag]
-          const ragGlow   = { green: 'rgba(34,197,94,0.22)', amber: 'rgba(245,158,11,0.22)', red: 'rgba(239,68,68,0.22)', grey: 'rgba(148,163,184,0.08)' }[rag]
-
-          return (
-            <button key={s.id}
-              onClick={() => onSelect(isActive ? null : s.id)}
-              onMouseEnter={() => setHoveredId(s.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              style={{
-                background: isActive ? `${color}0d` : 'rgba(255,255,255,0.04)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: `1px solid ${isActive ? color + '55' : isHovered ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.07)'}`,
-                borderTop: `3px solid ${isActive ? color : isHovered ? color + '70' : 'transparent'}`,
-                borderRadius: 14,
-                padding: 16,
-                textAlign: 'left',
-                cursor: 'pointer',
-                transition: 'all 200ms cubic-bezier(0.34,1.56,0.64,1)',
-                transform: isHovered && !isActive ? 'translateY(-2px)' : 'none',
-                boxShadow: isActive
-                  ? `0 8px 32px ${ragGlow}`
-                  : isHovered ? '0 8px 28px rgba(0,0,0,0.35)'
-                  : '0 2px 12px rgba(0,0,0,0.2)',
-              }}>
-
-              {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-                  color: isActive ? color : '#64748B',
-                }}>
-                  {s.label}
-                </span>
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
-                  background: `${ragColor}18`, color: ragColor,
-                  border: `1px solid ${ragColor}28`,
-                }}>
-                  {ragLabel}
-                </span>
-              </div>
-
-              {/* Score with gradient text */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, marginBottom: 12 }}>
-                <span style={{
-                  fontSize: 40, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em',
-                  background: `linear-gradient(135deg, #ffffff 0%, ${ragColor} 100%)`,
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                }}>
-                  {score !== null ? Math.round(score) : '—'}
-                </span>
-                {score !== null && (
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 4 }}>/100</span>
-                )}
-              </div>
-
-              {/* Progress bar */}
-              <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 10 }}>
-                <div style={{
-                  height: '100%', borderRadius: 999,
-                  width: `${score ?? 0}%`,
-                  background: `linear-gradient(90deg, ${ragColor}80, ${ragColor})`,
-                  transition: 'width 700ms cubic-bezier(0.34,1.56,0.64,1)',
-                }} />
-              </div>
-
-              {/* Shift info */}
-              <div style={{ fontSize: 10, color: '#475569' }}>
-                {s.last_shift
-                  ? `${s.last_shift.shift_type === 'day' ? '☀' : '🌙'} ${s.last_shift.shift_type} · ${s.last_shift.date}`
-                  : 'No shift data yet'}
-              </div>
-            </button>
-          )
-        })}
+      {/* 3 top-level section cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+        {sections.map(s => <SectionCard key={s.id} s={s} selected={selected} onSelect={onSelect} />)}
       </div>
+
+      {/* Outbound subsections — revealed when Outbound is selected */}
+      {selected === 'outbound' && (
+        <div style={{ padding: '4px 0 2px 2px' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#0891B2', marginBottom: 10 }}>
+            Outbound Areas — select one to view its KPIs
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+            {OUTBOUND_SUBS.map(sub => {
+              const subData  = outbound?.subsections?.find(ss => ss.id === sub.id)
+              const score    = subData?.score ?? null
+              const isActive = selectedSub === sub.id
+              const color    = SECTION_COLORS[sub.id] || '#6b7280'
+              const rag      = score === null ? 'grey' : score >= 80 ? 'green' : score >= 60 ? 'amber' : 'red'
+              const ragColor = { green: '#22C55E', amber: '#F59E0B', red: '#EF4444', grey: '#94A3B8' }[rag]
+              const ragLabel = { green: 'Healthy', amber: 'Monitor', red: 'At Risk', grey: 'No data' }[rag]
+              return (
+                <button key={sub.id} onClick={() => onSelectSub(isActive ? null : sub.id)}
+                  style={{
+                    background: isActive ? `${color}12` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${isActive ? color + '50' : 'rgba(255,255,255,0.07)'}`,
+                    borderTop: `2px solid ${isActive ? color : color + '35'}`,
+                    borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left',
+                    transition: 'all 180ms cubic-bezier(0.34,1.56,0.64,1)',
+                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: isActive ? color : '#64748B' }}>{sub.label}</span>
+                    <span style={{ fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 999, background: `${ragColor}18`, color: ragColor }}>{ragLabel}</span>
+                  </div>
+                  <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 10, background: `linear-gradient(135deg, #fff 0%, ${ragColor} 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                    {score !== null ? Math.round(score) : '—'}
+                  </div>
+                  <div style={{ height: 3, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 999, width: `${score ?? 0}%`, background: `linear-gradient(90deg, ${ragColor}80, ${ragColor})`, transition: 'width 700ms' }} />
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -325,9 +347,10 @@ function SectionCards({ sections, selected, onSelect }) {
 const FALLBACK_SECTIONS = [
   { id: 'inbound',  label: 'Inbound',  order: 1, score: null, score_status: 'no_data', last_shift: null },
   { id: 'icqa',     label: 'ICQA',     order: 2, score: null, score_status: 'no_data', last_shift: null },
-  { id: 'pick',     label: 'Pick',     order: 3, score: null, score_status: 'no_data', last_shift: null },
-  { id: 'pack',     label: 'Pack',     order: 4, score: null, score_status: 'no_data', last_shift: null },
-  { id: 'outbound', label: 'Outbound', order: 5, score: null, score_status: 'no_data', last_shift: null },
+  {
+    id: 'outbound', label: 'Outbound', order: 3, score: null, score_status: 'no_data', last_shift: null,
+    subsections: OUTBOUND_SUBS.map(s => ({ ...s, score: null, score_status: 'no_data', last_shift: null })),
+  },
 ]
 
 export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
@@ -345,7 +368,8 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
   const [kpiTargets, setKpiTargets]     = useState(DEFAULT_TARGETS)
   const [timeWindow, setTimeWindow]     = useState(30)
   const [spcExpanded, setSpcExpanded]   = useState(false)
-  const [selectedSection, setSelectedSection] = useState(null)
+  const [selectedSection, setSelectedSection]       = useState(null)
+  const [selectedSubsection, setSelectedSubsection] = useState(null)
 
   // Shift-level entry
   const [logMode, setLogMode]   = useState('daily')  // 'daily' | 'shift'
@@ -360,7 +384,7 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
   const [rightTab, setRightTab] = useState('limits') // 'limits' | 'data' | 'benchmark'
 
   useEffect(() => {
-    api.getSections().then(data => { if (data?.length) setSections(data) }).catch(() => {})
+    api.getSections().then(data => { if (data?.length) setSections(normalizeSections(data)) }).catch(() => {})
     api.getLatestKpis().then(setLatestKpis).catch(() => {})
     api.getKpis().then(setAllKpis).catch(() => {})
     api.getProjects().then(ps => setProjects(ps.filter(p => p.stage !== 'Closed'))).catch(() => {})
@@ -469,8 +493,16 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
     kpiByMetric[m.id] = allKpis.filter(k => k.metric_id === m.id).sort((a, b) => a.date.localeCompare(b.date))
   }
 
-  const activeSection = sections.find(s => s.id === selectedSection)
-  const sectionColor  = selectedSection ? (SECTION_COLORS[selectedSection] || '#6b7280') : '#E8820C'
+  const outboundSection = sections.find(s => s.id === 'outbound')
+  const activeSection   = selectedSubsection
+    ? (outboundSection?.subsections?.find(ss => ss.id === selectedSubsection) || null)
+    : sections.find(s => s.id === selectedSection)
+  const sectionColor    = selectedSubsection
+    ? (SECTION_COLORS[selectedSubsection] || '#6b7280')
+    : selectedSection ? (SECTION_COLORS[selectedSection] || '#6b7280') : '#E8820C'
+  const activeLabelFull = selectedSubsection
+    ? `Outbound › ${OUTBOUND_SUBS.find(s => s.id === selectedSubsection)?.label} — metrics and performance`
+    : activeSection ? `${activeSection.label} — metrics and performance` : 'Most recent shift health score per section'
 
   return (
     <div className="max-w-[1400px] space-y-5">
@@ -479,11 +511,7 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
           <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>
             Warehouse Health
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>
-            {selectedSection
-              ? `${activeSection?.label} — metrics, scores and performance charts`
-              : 'Most recent shift health score per section'}
-          </p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>{activeLabelFull}</p>
         </div>
         {selectedSection && (
           <button onClick={() => setShowGlossary(g => !g)}
@@ -495,10 +523,27 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
       </div>
 
       {/* Section selector cards */}
-      <SectionCards sections={sections} selected={selectedSection} onSelect={setSelectedSection} />
+      <SectionCards
+        sections={sections}
+        selected={selectedSection}
+        onSelect={id => { setSelectedSection(id); setSelectedSubsection(null) }}
+        selectedSub={selectedSubsection}
+        onSelectSub={setSelectedSubsection}
+      />
+
+      {/* Outbound no-sub prompt */}
+      {selectedSection === 'outbound' && !selectedSubsection && (
+        <div className="card p-8 flex flex-col items-center justify-center text-center gap-3" style={{ borderStyle: 'dashed', borderColor: 'rgba(8,145,178,0.25)' }}>
+          <div style={{ fontSize: 28, opacity: 0.4, color: '#0891B2' }}>▸</div>
+          <div className="font-semibold text-sm" style={{ color: 'var(--text-2)' }}>Select an Outbound area above</div>
+          <div className="text-xs max-w-sm leading-relaxed" style={{ color: 'var(--text-3)' }}>
+            Pick, Pack, Slam, Sort, or Loading — each has its own KPIs and health score.
+          </div>
+        </div>
+      )}
 
       {/* ── Section detail ── */}
-      {selectedSection && <>
+      {(selectedSection === 'outbound' ? !!selectedSubsection : !!selectedSection) && <>
 
       {/* Section health summary */}
       {activeSection && (() => {
@@ -509,7 +554,9 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
         return (
           <div className="card p-5 flex items-center gap-6" style={{ borderLeft: `4px solid ${sectionColor}` }}>
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-3)' }}>{activeSection.label} — Health Score</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: 'var(--text-3)' }}>
+                {selectedSubsection ? `Outbound › ${activeSection.label}` : activeSection.label} — Health Score
+              </div>
               <div className="flex items-baseline gap-2">
                 <span style={{ fontSize: 52, fontWeight: 800, letterSpacing: '-3px', color: score !== null ? ragColor : 'var(--text-3)', lineHeight: 1 }}>
                   {score !== null ? Math.round(score) : '—'}

@@ -3,7 +3,7 @@ import { api } from '../lib/api.js'
 import ObsCard from '../components/ObsCard.jsx'
 import PresentationHotspot from '../components/PresentationHotspot.jsx'
 
-const AREAS = ['Inbound', 'Stow', 'Pick', 'Pack', 'Dispatch', 'Yard', 'Admin']
+const AREAS = ['Inbound', 'ICQA', 'Pick', 'Pack', 'Slam', 'Sort', 'Loading', 'Admin']
 const WASTE_TYPES = ['Transport', 'Inventory', 'Motion', 'Waiting', 'Overproduction', 'Overprocessing', 'Defects', 'Skills']
 
 const WASTE_COLORS = {
@@ -23,13 +23,14 @@ const WASTE_KEYWORDS = {
 }
 
 const AREA_KEYWORDS = {
-  Inbound:  ['inbound', 'receiving', 'goods in', 'unload', 'delivery', 'intake', 'receive'],
-  Stow:     ['stow', 'stowing', 'put away', 'putaway', 'binning', 'bin location', 'shelving'],
-  Pick:     ['pick', 'picking', 'picker', 'pick zone', 'pick aisle', 'zone a', 'zone b', 'zone c'],
-  Pack:     ['pack', 'packing', 'packer', 'boxing', 'carton', 'packing station', 'tape'],
-  Dispatch: ['dispatch', 'ship', 'shipping', 'outbound', 'loading dock', 'trailers', 'despatch'],
-  Yard:     ['yard', 'dock', 'trailer', 'lorry', 'loading bay', 'outside', 'gate'],
-  Admin:    ['admin', 'office', 'paperwork', 'system error', 'computer', 'screen', 'log in'],
+  Inbound: ['inbound', 'receiving', 'goods in', 'unload', 'delivery', 'intake', 'receive'],
+  ICQA:    ['icqa', 'inventory control', 'quality audit', 'bin check', 'count', 'location audit', 'stock check'],
+  Pick:    ['pick', 'picking', 'picker', 'pick zone', 'pick aisle', 'zone a', 'zone b', 'zone c'],
+  Pack:    ['pack', 'packing', 'packer', 'boxing', 'carton', 'packing station', 'tape'],
+  Slam:    ['slam', 'slammer', 'slam station', 'label', 'label station', 'print and apply'],
+  Sort:    ['sort', 'sorting', 'sorter', 'chute', 'sort station', 'divert'],
+  Loading: ['loading', 'load', 'trailer', 'dispatch', 'ship', 'shipping', 'outbound dock', 'trailers', 'despatch', 'loading bay'],
+  Admin:   ['admin', 'office', 'paperwork', 'system error', 'computer', 'screen', 'log in'],
 }
 
 const glass = {
@@ -263,10 +264,15 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
   const topWaste = Object.entries(byWaste).sort((a, b) => b[1] - a[1]).slice(0, 5)
   const todayObs = observations.filter(o => o.date === new Date().toISOString().split('T')[0])
 
-  const ZONE_KEYS = ['Inbound', 'Stow', 'Pick', 'Pack', 'Dispatch', 'Yard']
-  const zoneCards = ZONE_KEYS.map(zoneName => {
-    const zoneObs  = todayObs.filter(o => o.area === zoneName)
-    const weekObs  = last7.filter(o => o.area === zoneName)
+  const OUTBOUND_AREAS = ['Pick', 'Pack', 'Slam', 'Sort', 'Loading']
+  const ZONE_DEFS = [
+    { zoneName: 'Inbound',  areaNames: ['Inbound'],       color: '#3B7FDE' },
+    { zoneName: 'ICQA',     areaNames: ['ICQA'],           color: '#7C3AED' },
+    { zoneName: 'Outbound', areaNames: OUTBOUND_AREAS,     color: '#0891B2' },
+  ]
+  const zoneCards = ZONE_DEFS.map(({ zoneName, areaNames, color }) => {
+    const zoneObs  = todayObs.filter(o => areaNames.includes(o.area))
+    const weekObs  = last7.filter(o => areaNames.includes(o.area))
     const hasRed   = zoneObs.some(o => o.severity >= 3) || weekObs.length >= 4
     const hasAmber = zoneObs.some(o => o.severity >= 2) || weekObs.length >= 2
     const statusColor = hasRed ? '#EF4444' : hasAmber ? '#F59E0B' : '#22C55E'
@@ -274,12 +280,17 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
     const topWasteZone = Object.entries(
       weekObs.reduce((acc, o) => { acc[o.waste_type] = (acc[o.waste_type] || 0) + 1; return acc }, {})
     ).sort((a, b) => b[1] - a[1])[0]
-    // sparkline: obs count per day for last 7 days
     const sparkData = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      return observations.filter(o => o.area === zoneName && o.date === d).length
+      return observations.filter(o => areaNames.includes(o.area) && o.date === d).length
     })
-    return { zoneName, zoneObs, weekObs, statusColor, statusLabel, topWasteZone, sparkData }
+    // per-area breakdown for Outbound
+    const subBreakdown = zoneName === 'Outbound' ? OUTBOUND_AREAS.map(a => ({
+      area: a,
+      today: todayObs.filter(o => o.area === a).length,
+      week: last7.filter(o => o.area === a).length,
+    })) : null
+    return { zoneName, areaNames, zoneObs, weekObs, statusColor, statusLabel, topWasteZone, sparkData, subBreakdown, color }
   })
 
   return (
@@ -327,37 +338,39 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
         </div>
       )}
 
-      {/* Zone cards grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 12, marginBottom: 24 }}>
-        {zoneCards.map(({ zoneName, zoneObs, weekObs, statusColor, statusLabel, topWasteZone, sparkData }, idx) => (
+      {/* Zone cards grid — 3 top-level sections */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 24 }}>
+        {zoneCards.map(({ zoneName, zoneObs, weekObs, statusColor, statusLabel, topWasteZone, sparkData, subBreakdown, color }) => (
           <div key={zoneName}
-            style={{
-              ...glass,
-              padding: 18,
-              display: 'flex', flexDirection: 'column',
-              cursor: 'pointer', transition: 'transform 220ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 220ms ease',
-              borderTop: `2px solid ${statusColor}`,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${statusColor}20` }}
-            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+            style={{ ...glass, padding: 20, display: 'flex', flexDirection: 'column', cursor: 'default', borderTop: `2px solid ${statusColor}`, transition: 'box-shadow 220ms ease' }}>
             {/* Name + badge */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 15, color: '#f0f0f2' }}>{zoneName}</span>
-              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.07em', padding: '2px 7px', borderRadius: 999, background: `${statusColor}15`, color: statusColor, border: `1px solid ${statusColor}30` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 800, fontSize: 16, color: '#f0f0f2' }}>{zoneName}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.07em', padding: '2px 8px', borderRadius: 999, background: `${statusColor}15`, color: statusColor, border: `1px solid ${statusColor}30` }}>
                 {statusLabel.toUpperCase()}
               </span>
             </div>
             {/* Stats: today + week */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               <div>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#4a4a57', marginBottom: 3 }}>Today</div>
-                <div style={{ fontFamily: 'Geist, sans-serif', fontSize: 26, fontWeight: 800, letterSpacing: '-0.05em', color: zoneObs.length > 0 ? statusColor : '#f0f0f2', lineHeight: 1 }}>{zoneObs.length}</div>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#4a4a57', marginBottom: 4 }}>Today</div>
+                <div style={{ fontFamily: 'Geist, sans-serif', fontSize: 32, fontWeight: 800, letterSpacing: '-0.05em', color: zoneObs.length > 0 ? statusColor : '#f0f0f2', lineHeight: 1 }}>{zoneObs.length}</div>
               </div>
               <div>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#4a4a57', marginBottom: 3 }}>7-Day</div>
-                <div style={{ fontFamily: 'Geist, sans-serif', fontSize: 26, fontWeight: 800, letterSpacing: '-0.05em', color: weekObs.length > 3 ? '#F59E0B' : '#8b8b97', lineHeight: 1 }}>{weekObs.length}</div>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#4a4a57', marginBottom: 4 }}>7-Day</div>
+                <div style={{ fontFamily: 'Geist, sans-serif', fontSize: 32, fontWeight: 800, letterSpacing: '-0.05em', color: weekObs.length > 3 ? '#F59E0B' : '#8b8b97', lineHeight: 1 }}>{weekObs.length}</div>
               </div>
             </div>
+            {/* Outbound: sub-area mini breakdown */}
+            {subBreakdown && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                {subBreakdown.map(sub => (
+                  <div key={sub.area} style={{ fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 7, background: sub.today > 0 ? `${statusColor}12` : 'rgba(255,255,255,0.04)', color: sub.today > 0 ? statusColor : '#4a4a57', border: `1px solid ${sub.today > 0 ? statusColor + '30' : 'rgba(255,255,255,0.06)'}` }}>
+                    {sub.area} {sub.today > 0 && <span style={{ fontWeight: 800 }}>·{sub.today}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
             {/* Bottom: top waste + sparkline */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 'auto' }}>
               {topWasteZone ? (
