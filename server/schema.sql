@@ -1,17 +1,26 @@
 -- Continuum CI — PostgreSQL schema for Supabase
 -- Run this in the Supabase SQL Editor to create all tables
 
+-- ─── Auto-update trigger for updated_at columns ───────────────────────────────
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TABLE IF NOT EXISTS kpi_data (
   id SERIAL PRIMARY KEY,
   metric_id TEXT NOT NULL,
   metric_label TEXT NOT NULL,
   value DOUBLE PRECISION NOT NULL,
   target DOUBLE PRECISION,
-  date TEXT NOT NULL,
+  date DATE NOT NULL,
   shift TEXT,
   signal INTEGER DEFAULT 0,
   annotation TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS observations (
@@ -20,9 +29,9 @@ CREATE TABLE IF NOT EXISTS observations (
   waste_type TEXT NOT NULL,
   severity INTEGER DEFAULT 1,
   text TEXT NOT NULL,
-  date TEXT NOT NULL,
-  timestamp TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
+  date DATE NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS portfolios (
@@ -34,9 +43,13 @@ CREATE TABLE IF NOT EXISTS portfolios (
   impact_unit TEXT DEFAULT 'UPH improvement',
   area_focus TEXT DEFAULT 'All',
   status TEXT DEFAULT 'active',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE OR REPLACE TRIGGER portfolios_updated_at
+  BEFORE UPDATE ON portfolios
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TABLE IF NOT EXISTS projects (
   id SERIAL PRIMARY KEY,
@@ -47,16 +60,20 @@ CREATE TABLE IF NOT EXISTS projects (
   target_value DOUBLE PRECISION,
   problem_statement TEXT DEFAULT '',
   notes TEXT DEFAULT '',
-  charter TEXT DEFAULT '{}',
-  actions TEXT DEFAULT '[]',
-  maps TEXT DEFAULT '[]',
-  stage_checklist TEXT DEFAULT '{}',
+  charter JSONB DEFAULT '{}',
+  actions JSONB DEFAULT '[]',
+  maps JSONB DEFAULT '[]',
+  stage_checklist JSONB DEFAULT '{}',
   portfolio_id INTEGER REFERENCES portfolios(id),
   idea_id INTEGER,
   project_type TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE OR REPLACE TRIGGER projects_updated_at
+  BEFORE UPDATE ON projects
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TABLE IF NOT EXISTS ideas (
   id SERIAL PRIMARY KEY,
@@ -76,40 +93,44 @@ CREATE TABLE IF NOT EXISTS ideas (
   estimated_weeks INTEGER DEFAULT 4,
   project_id INTEGER REFERENCES projects(id),
   kpi_achieved DOUBLE PRECISION,
-  date_finished TEXT,
+  date_finished DATE,
   notes TEXT DEFAULT '',
   project_type TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE OR REPLACE TRIGGER ideas_updated_at
+  BEFORE UPDATE ON ideas
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TABLE IF NOT EXISTS flow_progress (
   id SERIAL PRIMARY KEY,
-  date TEXT UNIQUE NOT NULL,
-  steps TEXT DEFAULT '[]'
+  date DATE UNIQUE NOT NULL,
+  steps JSONB DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS site_profile (
   id SERIAL PRIMARY KEY,
   site_name TEXT DEFAULT 'Amazon FC',
   gm_name TEXT DEFAULT '',
-  zones TEXT DEFAULT '["Inbound","Stow","Pick","Pack","Dispatch","Yard","Admin"]',
-  primary_kpis TEXT DEFAULT '["uph","accuracy","dpmo","dts"]',
+  zones JSONB DEFAULT '["Inbound","Stow","Pick","Pack","Dispatch","Yard","Admin"]',
+  primary_kpis JSONB DEFAULT '["uph","accuracy","dpmo","dts"]',
   user_name TEXT DEFAULT 'Ryan',
   unit_value DOUBLE PRECISION DEFAULT 0,
   shift_pattern TEXT DEFAULT 'Day',
-  kpi_targets TEXT DEFAULT '{"UPH":100,"Accuracy":99.5,"DPMO":500,"DTS":98}',
+  kpi_targets JSONB DEFAULT '{"UPH":100,"Accuracy":99.5,"DPMO":500,"DTS":98}',
   site_notes TEXT DEFAULT '',
-  excel_config TEXT,
-  last_excel_sync TEXT
+  excel_config JSONB,
+  last_excel_sync TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS tier2_notes (
   id SERIAL PRIMARY KEY,
-  date TEXT NOT NULL,
+  date DATE NOT NULL,
   notes TEXT DEFAULT '',
-  actions TEXT DEFAULT '[]',
-  created_at TIMESTAMP DEFAULT NOW()
+  actions JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS maturity_scores (
@@ -126,10 +147,10 @@ CREATE TABLE IF NOT EXISTS maturity_scores (
 
 CREATE TABLE IF NOT EXISTS briefs (
   id SERIAL PRIMARY KEY,
-  date TEXT NOT NULL,
+  date DATE NOT NULL,
   content TEXT NOT NULL,
   type TEXT DEFAULT 'morning',
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS standalone_maps (
@@ -138,10 +159,14 @@ CREATE TABLE IF NOT EXISTS standalone_maps (
   area TEXT DEFAULT '',
   map_type TEXT DEFAULT 'current',
   description TEXT DEFAULT '',
-  data TEXT DEFAULT '[]',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  data JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE OR REPLACE TRIGGER standalone_maps_updated_at
+  BEFORE UPDATE ON standalone_maps
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TABLE IF NOT EXISTS process_maps (
   id SERIAL PRIMARY KEY,
@@ -149,12 +174,16 @@ CREATE TABLE IF NOT EXISTS process_maps (
   description TEXT,
   project_id INTEGER,
   portfolio_id INTEGER,
-  swimlanes TEXT DEFAULT '[]',
-  nodes TEXT DEFAULT '[]',
-  edges TEXT DEFAULT '[]',
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  swimlanes JSONB DEFAULT '[]',
+  nodes JSONB DEFAULT '[]',
+  edges JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE OR REPLACE TRIGGER process_maps_updated_at
+  BEFORE UPDATE ON process_maps
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- Seed site profile if empty
 INSERT INTO site_profile (site_name, user_name)
@@ -178,10 +207,10 @@ CREATE TABLE IF NOT EXISTS section_metrics (
 
 CREATE TABLE IF NOT EXISTS shifts (
   id SERIAL PRIMARY KEY,
-  date TEXT NOT NULL,
+  date DATE NOT NULL,
   shift_type TEXT NOT NULL CHECK (shift_type IN ('day', 'night')),
   status TEXT DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'complete', 'incomplete')),
-  created_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(date, shift_type)
 );
 
@@ -201,6 +230,20 @@ CREATE TABLE IF NOT EXISTS section_health_scores (
   section_id TEXT NOT NULL,
   score DOUBLE PRECISION,
   status TEXT DEFAULT 'incomplete' CHECK (status IN ('complete', 'incomplete')),
-  created_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(shift_id, section_id)
 );
+
+-- ─── Indexes ─────────────────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_kpi_data_date        ON kpi_data(date DESC);
+CREATE INDEX IF NOT EXISTS idx_kpi_data_metric_id   ON kpi_data(metric_id);
+CREATE INDEX IF NOT EXISTS idx_observations_date     ON observations(date DESC);
+CREATE INDEX IF NOT EXISTS idx_observations_area     ON observations(area);
+CREATE INDEX IF NOT EXISTS idx_projects_portfolio    ON projects(portfolio_id);
+CREATE INDEX IF NOT EXISTS idx_projects_stage        ON projects(stage);
+CREATE INDEX IF NOT EXISTS idx_ideas_portfolio       ON ideas(portfolio_id);
+CREATE INDEX IF NOT EXISTS idx_ideas_eval_status     ON ideas(eval_status);
+CREATE INDEX IF NOT EXISTS idx_shifts_date           ON shifts(date DESC);
+CREATE INDEX IF NOT EXISTS idx_metric_entries_shift  ON metric_entries(shift_id);
+CREATE INDEX IF NOT EXISTS idx_tier2_notes_date      ON tier2_notes(date DESC);
+CREATE INDEX IF NOT EXISTS idx_briefs_date           ON briefs(date DESC);

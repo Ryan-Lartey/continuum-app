@@ -4,10 +4,20 @@ dotenv.config()
 
 const { Pool } = pg
 
-const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+// Supabase uses trusted CAs — rejectUnauthorized: true is safe and required for security.
+// Never use rejectUnauthorized: false in production (disables certificate validation).
+const ssl = process.env.NODE_ENV === 'production' ? { rejectUnauthorized: true } : false
 
-const realPool = new Pool({ connectionString: process.env.DATABASE_URL, ssl })
-const _demoPool  = new Pool({ connectionString: process.env.DATABASE_URL, ssl })
+const poolConfig = {
+  connectionString: process.env.DATABASE_URL,
+  ssl,
+  max: 10,                 // max connections in pool (Supabase free tier supports ~20)
+  idleTimeoutMillis: 30000, // close idle connections after 30s
+  connectionTimeoutMillis: 2000, // fail fast if no connection available within 2s
+}
+
+const realPool = new Pool(poolConfig)
+const _demoPool  = new Pool(poolConfig)
 
 realPool.on('error', (err) => console.error('[DB] Real pool error', err))
 _demoPool.on('error',  (err) => console.error('[DB] Demo pool error', err))
