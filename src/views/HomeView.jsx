@@ -524,7 +524,7 @@ First person. Confident. Meeting-ready. No waffle.`
       )}
 
       {/* ─── Headcount Today ─── */}
-      <div className="card p-4">
+      <div className="card p-4" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Headcount Today</span>
           <button onClick={saveHeadcount}
@@ -559,18 +559,18 @@ First person. Confident. Meeting-ready. No waffle.`
       <div className="grid grid-cols-2 gap-5">
 
         {/* Recent Projects */}
-        <div className="card p-5">
+        <div className="card p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Recent Projects</h2>
+            <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Recent Projects</h2>
             <button onClick={() => onNavigate('projects')}
               className="text-[10px] font-bold uppercase tracking-widest hover:opacity-70 transition-opacity"
               style={{ color: 'var(--text-3)' }}>View All →</button>
           </div>
           {projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <div className="text-2xl" style={{ color: 'var(--text-3)' }}>◆</div>
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <div className="text-3xl mb-1" style={{ color: 'var(--text-3)', opacity: 0.5 }}>◆</div>
               <p className="text-sm" style={{ color: 'var(--text-3)' }}>No active projects</p>
-              <button onClick={() => onNavigate('projects')} className="text-xs font-semibold mt-1" style={{ color: '#E8820C' }}>Start one →</button>
+              <button onClick={() => onNavigate('projects')} className="text-xs font-semibold mt-1 px-3 py-1.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #f97316, #ea6c0a)', color: '#fff', boxShadow: '0 2px 12px rgba(249,115,22,0.2)' }}>Start one →</button>
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -582,8 +582,10 @@ First person. Confident. Meeting-ready. No waffle.`
                 const pct      = total > 0 ? done / total * 100 : stageIdx >= 0 ? stageIdx / DMAIC.length * 100 : 0
                 return (
                   <button key={p.id} onClick={() => onNavigate('projects', p)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:opacity-80 transition-all"
-                    style={{ background: 'var(--bg-input)' }}>
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:opacity-80 transition-all transition-colors"
+                    style={{ background: 'var(--bg-input)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-input)' }}>
                     <ProgressRing pct={pct} color={color} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-1)' }}>{p.title}</div>
@@ -601,8 +603,8 @@ First person. Confident. Meeting-ready. No waffle.`
         </div>
 
         {/* Tasks */}
-        <div className="card p-5">
-          <h2 className="font-semibold text-sm mb-3" style={{ color: 'var(--text-1)' }}>Tasks</h2>
+        <div className="card p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <h2 className="font-semibold text-sm mb-3" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Tasks</h2>
           <div className="flex gap-1 mb-4 p-1 rounded-xl" style={{ background: 'var(--bg-input)' }}>
             {[
               { id: 'upcoming',  label: 'Upcoming',  count: upcomingTasks.length },
@@ -624,15 +626,17 @@ First person. Confident. Meeting-ready. No waffle.`
             ))}
           </div>
           {activeTasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <div className="text-2xl" style={{ color: 'var(--text-3)' }}>○</div>
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <div className="text-3xl mb-1" style={{ color: 'var(--text-3)', opacity: 0.5 }}>○</div>
               <p className="text-sm" style={{ color: 'var(--text-3)' }}>No {taskTab} tasks</p>
             </div>
           ) : (
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {activeTasks.slice(0, 8).map((t, i) => (
-                <div key={i} className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
-                  style={{ background: 'var(--bg-input)' }}>
+                <div key={i} className="flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors"
+                  style={{ background: 'var(--bg-input)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-input)' }}>
                   <span className="flex-shrink-0 text-xs mt-0.5"
                     style={{ color: taskTab === 'completed' ? '#4ade80' : taskTab === 'overdue' ? '#f87171' : 'var(--text-3)' }}>
                     {taskTab === 'completed' ? '✓' : '○'}
@@ -656,16 +660,16 @@ First person. Confident. Meeting-ready. No waffle.`
       <div className="grid grid-cols-2 gap-5">
 
         {/* Portfolios */}
-        <div className="card p-5">
+        <div className="card p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Portfolios</h2>
+            <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Portfolios</h2>
             <button onClick={() => onNavigate('portfolio')}
               className="text-[10px] font-bold uppercase tracking-widest hover:opacity-70 transition-opacity"
               style={{ color: 'var(--text-3)' }}>View All →</button>
           </div>
           {portfolios.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <div className="text-2xl" style={{ color: 'var(--text-3)' }}>◈</div>
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <div className="text-3xl mb-1" style={{ color: 'var(--text-3)', opacity: 0.5 }}>◈</div>
               <p className="text-sm" style={{ color: 'var(--text-3)' }}>No portfolios yet</p>
             </div>
           ) : (
@@ -674,8 +678,10 @@ First person. Confident. Meeting-ready. No waffle.`
                 const pfProjects = projects.filter(p => p.portfolio_id === pf.id)
                 return (
                   <button key={pf.id} onClick={() => onOpenPortfolio?.(pf.id)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:opacity-80 transition-all"
-                    style={{ background: 'var(--bg-input)' }}>
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:opacity-80 transition-all transition-colors"
+                    style={{ background: 'var(--bg-input)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-input)' }}>
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ background: 'rgba(232,130,12,0.12)' }}>
                       <span style={{ color: '#E8820C', fontSize: 14 }}>◈</span>
@@ -695,17 +701,19 @@ First person. Confident. Meeting-ready. No waffle.`
         </div>
 
         {/* Recent Activity */}
-        <div className="card p-5">
-          <h2 className="font-semibold text-sm mb-4" style={{ color: 'var(--text-1)' }}>Recent Activity</h2>
+        <div className="card p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <h2 className="font-semibold text-sm mb-4" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Recent Activity</h2>
           {recentActivity.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <div className="text-2xl" style={{ color: 'var(--text-3)' }}>○</div>
+            <div className="flex flex-col items-center justify-center py-10 gap-3">
+              <div className="text-3xl mb-1" style={{ color: 'var(--text-3)', opacity: 0.5 }}>○</div>
               <p className="text-sm" style={{ color: 'var(--text-3)' }}>No activity logged yet</p>
             </div>
           ) : (
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {recentActivity.map((a, i) => (
-                <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: 'var(--bg-input)' }}>
+                <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-xl transition-colors" style={{ background: 'var(--bg-input)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-input)' }}>
                   <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                     style={{ background: `${a.color}15` }}>
                     <span className="text-[10px]" style={{ color: a.color }}>{a.icon}</span>
@@ -728,7 +736,7 @@ First person. Confident. Meeting-ready. No waffle.`
         const remaining = priorities.length - checkedPriorities.length
         const isMeeting = current?.type === 'meeting' || current?.type === 'escalation'
         return (
-          <div className="card p-5" style={{ position: 'relative' }}>
+          <div className="card p-5" style={{ position: 'relative', boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <PresentationHotspot id="home-priorities" demoMode={demoMode} />
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -831,10 +839,10 @@ First person. Confident. Meeting-ready. No waffle.`
       })()}
 
       {/* Morning Brief */}
-      <div className="card p-5" style={{ position: 'relative' }}>
+      <div className="card p-5" style={{ position: 'relative', boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <PresentationHotspot id="home-brief" demoMode={demoMode} />
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Morning Brief</h2>
+          <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Morning Brief</h2>
           <button onClick={() => autoGenerateBrief(latestKpis, projects, patterns)} disabled={briefStreaming}
             className="text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-40"
             style={{ background: 'rgba(232,130,12,0.12)', color: '#fb923c' }}>
@@ -857,7 +865,7 @@ First person. Confident. Meeting-ready. No waffle.`
           <div className="flex flex-col items-center justify-center py-8 text-center">
             {briefStreaming
               ? <span className="text-xs animate-pulse" style={{ color: 'var(--text-3)' }}>Generating brief…</span>
-              : <><div className="text-3xl mb-2" style={{ color: 'var(--text-3)' }}>◈</div><p className="text-xs" style={{ color: 'var(--text-3)' }}>Generating your brief…</p></>
+              : <><div className="text-3xl mb-3" style={{ color: 'var(--text-3)', opacity: 0.5 }}>◈</div><p className="text-xs" style={{ color: 'var(--text-3)' }}>Generating your brief…</p></>
             }
           </div>
         )}
@@ -869,7 +877,8 @@ First person. Confident. Meeting-ready. No waffle.`
         {/* Tier 2 Prep — pre-loaded with live context */}
         <button
           onClick={openTier2}
-          className="card px-4 py-3 text-left flex items-center gap-3 hover:opacity-80 transition-all">
+          className="card px-4 py-3 text-left flex items-center gap-3 hover:opacity-80 transition-all"
+          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <span className="text-lg w-7 flex-shrink-0 text-center" style={{ color: '#f87171' }}>⬡</span>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Prepare Tier 2</div>
@@ -880,7 +889,8 @@ First person. Confident. Meeting-ready. No waffle.`
 
         {/* Gemba Agent */}
         <button onClick={() => onOpenAgent('gemba-agent', null)}
-          className="card px-4 py-3 text-left flex items-center gap-3 hover:opacity-80 transition-all">
+          className="card px-4 py-3 text-left flex items-center gap-3 hover:opacity-80 transition-all"
+          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <span className="text-lg w-7 flex-shrink-0 text-center" style={{ color: '#4ade80' }}>◎</span>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Gemba Agent</div>
@@ -891,7 +901,8 @@ First person. Confident. Meeting-ready. No waffle.`
 
         {/* Project Coach */}
         <button onClick={() => onOpenAgent('project-agent', null)}
-          className="card px-4 py-3 text-left flex items-center gap-3 hover:opacity-80 transition-all">
+          className="card px-4 py-3 text-left flex items-center gap-3 hover:opacity-80 transition-all"
+          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <span className="text-lg w-7 flex-shrink-0 text-center" style={{ color: '#a78bfa' }}>◆</span>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>DMAIC Coach</div>

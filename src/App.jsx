@@ -83,7 +83,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-page)' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse 100% 60% at 20% 0%, rgba(249,115,22,0.035) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(99,102,241,0.025) 0%, transparent 50%), var(--bg-page)' }}>
       <SideNav
         active={view}
         onChange={(v) => { setView(v); setOpenProject(null); setOpenPortfolio(null) }}
@@ -96,11 +96,12 @@ export default function App() {
       />
 
       <main className="flex-1 overflow-y-auto min-w-0 flex flex-col">
+        <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(249,115,22,0.2), transparent)', flexShrink: 0 }} />
         {demoMode && (
           <div style={{
-            background: 'linear-gradient(90deg, rgba(251,146,60,0.15), rgba(251,146,60,0.05))',
-            borderBottom: '1px solid rgba(251,146,60,0.3)',
-            padding: '6px 20px',
+            background: 'linear-gradient(90deg, rgba(249,115,22,0.12) 0%, rgba(249,115,22,0.04) 100%)',
+            borderBottom: '1px solid rgba(249,115,22,0.2)',
+            padding: '8px 24px',
             fontSize: 12,
             color: '#fb923c',
             display: 'flex',
@@ -110,12 +111,12 @@ export default function App() {
           }}>
             <span>🎭</span>
             <span><strong>Presentation Mode</strong> — showing 3 months of demo data. Your real data is safe.</span>
-            <button onClick={toggleDemoMode} style={{ marginLeft: 'auto', fontSize: 11, color: '#fb923c', background: 'none', border: '1px solid rgba(251,146,60,0.4)', borderRadius: 4, padding: '2px 8px', cursor: 'pointer' }}>
+            <button onClick={toggleDemoMode} style={{ marginLeft: 'auto', background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: '6px', padding: '3px 10px', fontSize: 11, color: '#fb923c', cursor: 'pointer' }}>
               Exit Demo
             </button>
           </div>
         )}
-        <div className="p-6 flex-1">
+        <div className="p-7 flex-1">
           {view === 'home'      && <HomeView     {...viewProps} />}
           {view === 'floor'     && <FloorView    {...viewProps} />}
           {view === 'projects'  && <ProjectsView {...viewProps} openProject={openProject} />}
@@ -146,7 +147,7 @@ export default function App() {
 
       {agentOpen && (
         <>
-          <div className="fixed inset-0 bg-black/50 z-40 backdrop-blur-[2px]"
+          <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
             onClick={() => setAgentOpen(null)} />
           <AgentPanel
             agentId={agentOpen.id}
