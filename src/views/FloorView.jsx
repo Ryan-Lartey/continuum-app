@@ -32,6 +32,14 @@ const AREA_KEYWORDS = {
   Admin:    ['admin', 'office', 'paperwork', 'system error', 'computer', 'screen', 'log in'],
 }
 
+const glass = {
+  background: 'rgba(17,17,20,0.6)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: 14,
+}
+
 function detectFromText(text) {
   const lower = text.toLowerCase()
   let bestWaste = null, bestWasteScore = 0
@@ -45,6 +53,24 @@ function detectFromText(text) {
     if (score > bestAreaScore) { bestAreaScore = score; bestArea = area }
   }
   return { waste: bestWasteScore > 0 ? bestWaste : null, area: bestAreaScore > 0 ? bestArea : null }
+}
+
+function Sparkline({ data, color }) {
+  if (!data || data.length < 2) return null
+  const max = Math.max(...data)
+  const min = Math.min(...data)
+  const range = max - min || 1
+  const w = 64, h = 16
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w
+    const y = h - ((v - min) / range) * h
+    return `${x},${y}`
+  }).join(' ')
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ opacity: 0.6 }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  )
 }
 
 export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
@@ -71,16 +97,16 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
   const [portfolios, setPortfolios]     = useState([])
   const [ideaPortfolio, setIdeaPortfolio] = useState('')
   const [sendingIdea, setSendingIdea]   = useState(false)
-  const [ideaSent, setIdeaSent]         = useState(null) // { portfolioName, title }
-  const [pendingIdeaObs, setPendingIdeaObs] = useState(null) // obs object for modal
+  const [ideaSent, setIdeaSent]         = useState(null)
+  const [pendingIdeaObs, setPendingIdeaObs] = useState(null)
   const [sentIdeaIds, setSentIdeaIds]       = useState(new Set())
-  const [showCreatePf, setShowCreatePf]     = useState(false) // inline portfolio creator
+  const [showCreatePf, setShowCreatePf]     = useState(false)
   const [newPfName, setNewPfName]           = useState('')
   const [newPfArea, setNewPfArea]           = useState('Pick')
   const [creatingPf, setCreatingPf]         = useState(false)
-  const [converting, setConverting]         = useState(false) // AI converting obs → idea
-  const [converted, setConverted]           = useState(null)  // { idea, recommendation }
-  const [editedTitle, setEditedTitle]       = useState('')    // user-editable AI title
+  const [converting, setConverting]         = useState(false)
+  const [converted, setConverted]           = useState(null)
+  const [editedTitle, setEditedTitle]       = useState('')
 
   useEffect(() => { loadData() }, [])
 
@@ -109,17 +135,14 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
     setEditedTitle('')
     setShowCreatePf(false)
     setPendingIdeaObs(obs)
-    // immediately kick off AI conversion
     setConverting(true)
     try {
       const result = await api.convertObservation(obs)
       setConverted(result)
       setEditedTitle(result.idea?.title || '')
-      // auto-select portfolio if AI found a match
       if (result.recommendation?.action === 'use_existing' && result.recommendation?.portfolio_id) {
         setIdeaPortfolio(String(result.recommendation.portfolio_id))
       }
-      // pre-fill new portfolio fields if AI suggests creating one
       if (result.recommendation?.action === 'create_new') {
         setNewPfName(result.recommendation.new_name || '')
         setNewPfArea(result.recommendation.new_area || 'Pick')
@@ -137,12 +160,8 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
     setCreatingPf(true)
     try {
       const pf = await api.createPortfolio({
-        name: newPfName.trim(),
-        area_focus: newPfArea,
-        primary_kpi: 'uph',
-        impact_goal: 0,
-        impact_unit: 'improvement',
-        strategic_objective: '',
+        name: newPfName.trim(), area_focus: newPfArea, primary_kpi: 'uph',
+        impact_goal: 0, impact_unit: 'improvement', strategic_objective: '',
       })
       setPortfolios(prev => [...prev, pf])
       setIdeaPortfolio(String(pf.id))
@@ -171,14 +190,7 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
     setSendingIdea(true)
     try {
       const pf = portfolios.find(p => p.id === parseInt(ideaPortfolio))
-      await api.createIdea({
-        portfolio_id: parseInt(ideaPortfolio),
-        title,
-        description: description || '',
-        waste_type,
-        area: areaVal || '',
-        source,
-      })
+      await api.createIdea({ portfolio_id: parseInt(ideaPortfolio), title, description: description || '', waste_type, area: areaVal || '', source })
       if (obsId) setSentIdeaIds(prev => new Set([...prev, obsId]))
       setIdeaSent({ portfolioName: pf?.name || 'portfolio', title })
       setRaisePrompt(null)
@@ -194,27 +206,14 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
     try {
       const today = new Date().toISOString().split('T')[0]
       await api.addObservation({ area, waste_type: wasteType, severity, text: obsText, date: today })
-
-      // Link to project as clue if selected
       if (linkProject) {
         const p = await api.getProject(parseInt(linkProject))
         linkedProjectName = p.title
         const existing = p.charter?.clues || []
         await api.updateProject(p.id, {
-          charter: {
-            ...(p.charter || {}),
-            clues: [...existing, {
-              id: Date.now(),
-              title: obsText.slice(0, 60),
-              description: obsText,
-              type: 'Floor Observation',
-              area,
-              wasteType,
-            }],
-          },
+          charter: { ...(p.charter || {}), clues: [...existing, { id: Date.now(), title: obsText.slice(0, 60), description: obsText, type: 'Floor Observation', area, wasteType }] },
         })
       }
-
       setLastObs({ area, wasteType, text: obsText, linkedProjectName })
       setObsText('')
       setAutoDetected(false)
@@ -238,17 +237,7 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
       const p = await api.getProject(parseInt(clueProject))
       const existing = p.charter?.clues || []
       await api.updateProject(p.id, {
-        charter: {
-          ...(p.charter || {}),
-          clues: [...existing, {
-            id: Date.now(),
-            title: lastObs.text.slice(0, 60),
-            description: lastObs.text,
-            type: 'Floor Observation',
-            area: lastObs.area,
-            wasteType: lastObs.wasteType,
-          }],
-        },
+        charter: { ...(p.charter || {}), clues: [...existing, { id: Date.now(), title: lastObs.text.slice(0, 60), description: lastObs.text, type: 'Floor Observation', area: lastObs.area, wasteType: lastObs.wasteType }] },
       })
       setClueAdded(true)
       setTimeout(() => { setClueAdded(false); setLastObs(null); setClueProject('') }, 2000)
@@ -269,173 +258,152 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
     return o.created_at >= cutoff
   })
-  const byWaste   = {}
+  const byWaste  = {}
   for (const o of last7) byWaste[o.waste_type] = (byWaste[o.waste_type] || 0) + 1
-  const topWaste  = Object.entries(byWaste).sort((a, b) => b[1] - a[1]).slice(0, 5)
-  const todayObs  = observations.filter(o => o.date === new Date().toISOString().split('T')[0])
+  const topWaste = Object.entries(byWaste).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const todayObs = observations.filter(o => o.date === new Date().toISOString().split('T')[0])
 
-  // ─── Area stat cards derived from today's observations ───
-  const AREA_KEYS = ['Inbound', 'Stow', 'Pick', 'Pack', 'Dispatch', 'Yard']
-  const areaStats = AREA_KEYS.map(areaName => {
-    const areaObs  = todayObs.filter(o => o.area === areaName)
-    const weekObs  = last7.filter(o => o.area === areaName)
-    const hasRed   = areaObs.some(o => o.severity >= 3) || weekObs.length >= 4
-    const hasAmber = areaObs.some(o => o.severity >= 2) || weekObs.length >= 2
-    const status   = hasRed ? 'behind' : hasAmber ? 'at-risk' : 'on-track'
-    const statusLabel = hasRed ? 'BEHIND' : hasAmber ? 'WATCH' : 'ON TRACK'
+  const ZONE_KEYS = ['Inbound', 'Stow', 'Pick', 'Pack', 'Dispatch', 'Yard']
+  const zoneCards = ZONE_KEYS.map(zoneName => {
+    const zoneObs  = todayObs.filter(o => o.area === zoneName)
+    const weekObs  = last7.filter(o => o.area === zoneName)
+    const hasRed   = zoneObs.some(o => o.severity >= 3) || weekObs.length >= 4
+    const hasAmber = zoneObs.some(o => o.severity >= 2) || weekObs.length >= 2
     const statusColor = hasRed ? '#EF4444' : hasAmber ? '#F59E0B' : '#22C55E'
-    const topWasteArea = Object.entries(
+    const statusLabel = hasRed ? 'Behind' : hasAmber ? 'Watch' : 'On Track'
+    const topWasteZone = Object.entries(
       weekObs.reduce((acc, o) => { acc[o.waste_type] = (acc[o.waste_type] || 0) + 1; return acc }, {})
     ).sort((a, b) => b[1] - a[1])[0]
-
-    return { areaName, areaObs, weekObs, status, statusLabel, statusColor, topWasteArea }
+    // sparkline: obs count per day for last 7 days
+    const sparkData = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      return observations.filter(o => o.area === zoneName && o.date === d).length
+    })
+    return { zoneName, zoneObs, weekObs, statusColor, statusLabel, topWasteZone, sparkData }
   })
 
   return (
-    <div className="max-w-[1400px]">
+    <div style={{ maxWidth: 1400 }}>
 
-      {/* ─── Header ─── */}
-      <div className="flex items-center justify-between mb-5">
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-1)', letterSpacing: '-0.04em' }}>Floor Walk</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>
+          <h1 style={{ fontFamily: 'Geist, sans-serif', fontSize: 30, fontWeight: 800, letterSpacing: '-0.04em', color: '#f0f0f2', lineHeight: 1.1 }}>
+            Floor Walk
+          </h1>
+          <p style={{ fontSize: 13, color: '#8b8b97', marginTop: 4 }}>
             {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-            <span className="mx-2" style={{ color: 'var(--border2)' }}>·</span>
+            <span style={{ margin: '0 8px', color: 'rgba(255,255,255,0.15)' }}>·</span>
             {todayObs.length} obs today · {last7.length} this week
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => onOpenAgent('gemba-agent', null)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold"
-            style={{ background: 'rgba(34,197,94,0.1)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.2)' }}>
-            ◎ Gemba Agent
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, background: 'rgba(34,197,94,0.1)', color: '#22C55E', border: '1px solid rgba(34,197,94,0.2)', cursor: 'pointer' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>radio_button_checked</span>
+            Gemba Agent
           </button>
-          <button
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white btn-primary">
-            ▶ Start Walk
+          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600, background: 'linear-gradient(135deg,#f97316,#ea580c)', color: 'white', border: 'none', cursor: 'pointer' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>play_arrow</span>
+            Start Walk
           </button>
         </div>
-      </div>
-
-      {/* ─── Area stat cards ─── */}
-      <div className="flex gap-3 mb-5" style={{ overflowX: 'auto', paddingBottom: 2 }}>
-        {areaStats.map(({ areaName, areaObs, weekObs, status, statusLabel, statusColor, topWasteArea }, idx) => (
-          <div key={areaName}
-            className={`area-stat-card ${status}`}
-            style={{
-              animationDelay: `${idx * 60}ms`,
-              animation: 'fadeIn 0.3s ease both',
-            }}>
-            {/* Area name + status badge */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B' }}>
-                {areaName}
-              </span>
-              <span style={{
-                fontSize: 9, fontWeight: 800, letterSpacing: '0.08em',
-                padding: '2px 7px', borderRadius: 999,
-                background: `${statusColor}15`, color: statusColor,
-                border: `1px solid ${statusColor}30`,
-              }}>
-                {statusLabel}
-              </span>
-            </div>
-
-            {/* Main stat: today's obs count */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 8 }}>
-              <div>
-                <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Today</div>
-                <div style={{
-                  fontSize: 32, fontWeight: 800, lineHeight: 1,
-                  letterSpacing: '-0.03em',
-                  background: areaObs.length > 0
-                    ? `linear-gradient(135deg, #fff 0%, ${statusColor} 100%)`
-                    : 'linear-gradient(135deg, #fff 0%, #475569 100%)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                }}>
-                  {areaObs.length}
-                </div>
-              </div>
-              <div style={{ paddingBottom: 4 }}>
-                <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Week</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: weekObs.length > 3 ? '#F59E0B' : '#64748B', lineHeight: 1 }}>
-                  {weekObs.length}
-                </div>
-              </div>
-            </div>
-
-            {/* Top waste tag */}
-            {topWasteArea ? (
-              <div style={{
-                fontSize: 10, fontWeight: 600,
-                padding: '3px 8px', borderRadius: 6,
-                background: 'rgba(255,255,255,0.04)',
-                color: '#64748B',
-                border: '1px solid rgba(255,255,255,0.06)',
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>
-                {topWasteArea[0]} ×{topWasteArea[1]}
-              </div>
-            ) : (
-              <div style={{ fontSize: 10, color: '#334155', fontWeight: 500 }}>No observations</div>
-            )}
-          </div>
-        ))}
       </div>
 
       {/* Pattern alerts */}
       {patterns.length > 0 && (
-        <div className="flex gap-3 mb-4 flex-wrap">
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
           {patterns.map(p => (
-            <div key={p.waste_type} className="flex items-center gap-3 px-4 py-2.5 rounded-xl border"
-              style={{ background: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.2)', borderLeft: '3px solid #EF4444' }}>
-              <span style={{ color: '#EF4444', fontSize: 16 }}>⚡</span>
+            <div key={p.waste_type} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderRadius: 10, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.25)', borderLeft: '3px solid #f97316', boxShadow: '0 0 12px rgba(249,115,22,0.08)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#f97316' }}>warning</span>
               <div>
-                <span className="font-semibold text-sm" style={{ color: '#f87171' }}>{p.waste_type}</span>
-                <span className="text-xs ml-1.5" style={{ color: '#fca5a5' }}>{p.area}</span>
-                <span className="text-xs ml-2 font-bold" style={{ color: '#f87171' }}>{p.count}× this week</span>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#fb923c' }}>{p.waste_type}</span>
+                <span style={{ fontSize: 12, marginLeft: 6, color: '#fca5a5' }}>{p.area}</span>
+                <span style={{ fontSize: 12, marginLeft: 8, fontWeight: 700, color: '#fb923c' }}>{p.count}× this week</span>
               </div>
-              <span className="text-xs ml-auto" style={{ color: '#94A3B8' }}>Pattern detected</span>
+              <span style={{ fontSize: 11, marginLeft: 'auto', color: '#8b8b97' }}>Pattern detected</span>
             </div>
           ))}
         </div>
       )}
 
-      <div className="grid grid-cols-5 gap-5 items-start">
+      {/* Zone cards grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 12, marginBottom: 24 }}>
+        {zoneCards.map(({ zoneName, zoneObs, weekObs, statusColor, statusLabel, topWasteZone, sparkData }, idx) => (
+          <div key={zoneName}
+            style={{
+              ...glass,
+              padding: 18,
+              display: 'flex', flexDirection: 'column',
+              cursor: 'pointer', transition: 'transform 220ms cubic-bezier(0.34,1.56,0.64,1), box-shadow 220ms ease',
+              borderTop: `2px solid ${statusColor}`,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${statusColor}20` }}
+            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+            {/* Name + badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span style={{ fontFamily: 'Geist, sans-serif', fontWeight: 700, fontSize: 15, color: '#f0f0f2' }}>{zoneName}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.07em', padding: '2px 7px', borderRadius: 999, background: `${statusColor}15`, color: statusColor, border: `1px solid ${statusColor}30` }}>
+                {statusLabel.toUpperCase()}
+              </span>
+            </div>
+            {/* Stats: today + week */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#4a4a57', marginBottom: 3 }}>Today</div>
+                <div style={{ fontFamily: 'Geist, sans-serif', fontSize: 26, fontWeight: 800, letterSpacing: '-0.05em', color: zoneObs.length > 0 ? statusColor : '#f0f0f2', lineHeight: 1 }}>{zoneObs.length}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#4a4a57', marginBottom: 3 }}>7-Day</div>
+                <div style={{ fontFamily: 'Geist, sans-serif', fontSize: 26, fontWeight: 800, letterSpacing: '-0.05em', color: weekObs.length > 3 ? '#F59E0B' : '#8b8b97', lineHeight: 1 }}>{weekObs.length}</div>
+              </div>
+            </div>
+            {/* Bottom: top waste + sparkline */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 'auto' }}>
+              {topWasteZone ? (
+                <span style={{ fontSize: 10, color: '#4a4a57', fontWeight: 600 }}>{topWasteZone[0]} ×{topWasteZone[1]}</span>
+              ) : (
+                <span style={{ fontSize: 10, color: '#4a4a57' }}>No obs</span>
+              )}
+              <Sparkline data={sparkData} color={statusColor} />
+            </div>
+          </div>
+        ))}
+      </div>
 
-        {/* ─── Quick capture form ─── */}
-        <div className="col-span-2 space-y-4">
-          <div className="card p-5" style={{ position: 'relative' }}>
+      {/* Main 3-col grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, alignItems: 'start' }}>
+
+        {/* Left col: quick capture */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ ...glass, padding: 22, position: 'relative' }}>
             <PresentationHotspot id="floor-observation" demoMode={demoMode} />
-            <h2 className="font-semibold mb-4" style={{ color: 'var(--text-1)' }}>Log Observation</h2>
+            <h2 style={{ fontFamily: 'Geist, sans-serif', fontSize: 17, fontWeight: 700, color: '#f0f0f2', marginBottom: 18 }}>Log Observation</h2>
 
             <form onSubmit={handleSubmit}>
-              {/* Text first — hero field */}
               <textarea
                 value={obsText}
                 onChange={e => setObsText(e.target.value)}
                 placeholder="What did you see? Where, how long, what impact…"
                 rows={4}
                 autoFocus
-                className="w-full text-sm rounded-xl px-3 py-2.5 resize-none mb-4 border"
                 style={{
-                  background:   'var(--bg-input)',
-                  borderColor:  severity === 3 ? '#DC2626' : obsText.trim() ? '#E8820C' : 'var(--border2)',
-                  color:        'var(--text-1)',
-                  outline:      'none',
+                  width: '100%', boxSizing: 'border-box', fontSize: 13, borderRadius: 10, padding: '10px 12px',
+                  resize: 'none', marginBottom: 16, outline: 'none', fontFamily: 'Inter, sans-serif',
+                  background: '#18181c', color: '#f0f0f2',
+                  border: `1px solid ${severity === 3 ? '#DC2626' : obsText.trim() ? '#f97316' : 'rgba(255,255,255,0.08)'}`,
                 }} />
 
-              {/* Area */}
-              <div className="mb-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-3)' }}>Area</div>
-                <div className="flex flex-wrap gap-1.5">
+              {/* Area pills */}
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#4a4a57', marginBottom: 8 }}>Area</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {AREAS.map(a => (
                     <button type="button" key={a} onClick={() => setArea(a)}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                      style={{
-                        background:  area === a ? '#E8820C' : 'var(--bg-input)',
-                        color:       area === a ? 'white' : 'var(--text-2)',
-                        border:      `1px solid ${area === a ? '#E8820C' : 'var(--border)'}`,
+                      style={{ padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all 150ms',
+                        background: area === a ? '#f97316' : 'rgba(255,255,255,0.04)',
+                        color: area === a ? 'white' : '#8b8b97',
+                        border: `1px solid ${area === a ? '#f97316' : 'rgba(255,255,255,0.08)'}`,
                       }}>
                       {a}
                     </button>
@@ -443,242 +411,171 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
                 </div>
               </div>
 
-              {/* Severity selector */}
-              <div className="mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide w-16 flex-shrink-0" style={{ color: 'var(--text-3)' }}>Severity</div>
-                  <div className="flex gap-1.5">
-                    {[
-                      { val: 1, label: 'Low',      color: '#16A34A', bg: 'rgba(22,163,74,0.12)'    },
-                      { val: 2, label: 'Medium',   color: '#E8820C', bg: 'rgba(232,130,12,0.12)'   },
-                      { val: 3, label: 'Critical', color: '#DC2626', bg: 'rgba(220,38,38,0.12)'    },
-                    ].map(({ val, label, color, bg }) => (
-                      <button type="button" key={val} onClick={() => setSeverity(val)}
-                        className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
-                        style={{
-                          background:  severity === val ? bg : 'var(--bg-input)',
-                          color:       severity === val ? color : 'var(--text-3)',
-                          border:      `1px solid ${severity === val ? color + '60' : 'var(--border)'}`,
-                        }}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+              {/* Severity */}
+              <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#4a4a57', flexShrink: 0, width: 60 }}>Severity</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[
+                    { val: 1, label: 'Low',      color: '#16A34A', bg: 'rgba(22,163,74,0.12)'  },
+                    { val: 2, label: 'Medium',   color: '#E8820C', bg: 'rgba(232,130,12,0.12)' },
+                    { val: 3, label: 'Critical', color: '#DC2626', bg: 'rgba(220,38,38,0.12)'  },
+                  ].map(({ val, label, color, bg }) => (
+                    <button type="button" key={val} onClick={() => setSeverity(val)}
+                      style={{ padding: '4px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                        background: severity === val ? bg : 'rgba(255,255,255,0.04)',
+                        color: severity === val ? color : '#4a4a57',
+                        border: `1px solid ${severity === val ? color + '60' : 'rgba(255,255,255,0.08)'}`,
+                      }}>
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Link to project — collapsible */}
-              <div className="mb-3">
+              {/* Link to project */}
+              <div style={{ marginBottom: 14 }}>
                 {!showLinkProject ? (
                   <button type="button" onClick={() => setShowLinkProject(true)}
-                    className="text-[11px] font-semibold"
-                    style={{ color: 'var(--text-3)' }}>
+                    style={{ fontSize: 11, fontWeight: 600, color: '#4a4a57', background: 'none', border: 'none', cursor: 'pointer' }}>
                     + Link to project
                   </button>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <select value={linkProject} onChange={e => setLinkProject(e.target.value)}
-                      className="flex-1 text-xs rounded-lg px-2.5 py-1.5 border"
-                      style={{ background: 'var(--bg-input)', borderColor: 'var(--border2)', color: 'var(--text-1)' }}>
+                      style={{ flex: 1, fontSize: 12, borderRadius: 8, padding: '6px 10px', background: '#18181c', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }}>
                       <option value="">No project link</option>
                       {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                     </select>
                     <button type="button" onClick={() => { setShowLinkProject(false); setLinkProject('') }}
-                      className="text-[10px] flex-shrink-0"
-                      style={{ color: 'var(--text-3)' }}>✕</button>
+                      style={{ fontSize: 11, color: '#4a4a57', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                   </div>
                 )}
               </div>
 
-              {/* Waste type — auto-detected, read-only */}
+              {/* Auto-detected waste */}
               {obsText.trim().length >= 10 && (
-                <div className="mb-4 flex items-center gap-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>Waste</span>
-                  {autoDetected ? (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5"
-                      style={{ background: `${WASTE_COLORS[wasteType]}18`, color: WASTE_COLORS[wasteType], border: `1px solid ${WASTE_COLORS[wasteType]}40` }}>
-                      ✦ {wasteType}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] px-2.5 py-1 rounded-full"
-                      style={{ background: `${WASTE_COLORS[wasteType]}18`, color: WASTE_COLORS[wasteType], border: `1px solid ${WASTE_COLORS[wasteType]}40` }}>
-                      {wasteType}
-                    </span>
-                  )}
-                  <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>· keep typing to refine</span>
+                <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#4a4a57' }}>Waste</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: `${WASTE_COLORS[wasteType]}18`, color: WASTE_COLORS[wasteType], border: `1px solid ${WASTE_COLORS[wasteType]}40` }}>
+                    {autoDetected ? '✦ ' : ''}{wasteType}
+                  </span>
+                  {autoDetected && <span style={{ fontSize: 10, color: '#4a4a57' }}>auto-detected</span>}
                 </div>
               )}
 
               <button type="submit" disabled={!obsText.trim() || saving}
-                className="w-full py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-40 transition-all"
-                style={{ background: saved ? '#16A34A' : '#E8820C' }}>
-                {saved ? '✓ Logged' : saving ? 'Saving…' : 'Log →'}
+                style={{ width: '100%', padding: '11px 0', borderRadius: 10, fontSize: 13, fontWeight: 700, color: 'white', border: 'none', cursor: obsText.trim() && !saving ? 'pointer' : 'not-allowed', opacity: !obsText.trim() || saving ? 0.4 : 1, background: saved ? '#16A34A' : 'linear-gradient(135deg,#f97316,#ea580c)', transition: 'all 150ms' }}>
+                {saved ? '✓ Logged' : saving ? 'Saving…' : 'Log Observation →'}
               </button>
             </form>
 
             {raisePrompt && !ideaSent && (
-              <div className="mt-3 rounded-xl p-3 border" style={{ background: 'rgba(220,38,38,0.06)', borderColor: 'rgba(220,38,38,0.2)' }}>
-                <p className="text-xs font-semibold mb-1" style={{ color: '#f87171' }}>
+              <div style={{ marginTop: 14, borderRadius: 10, padding: 14, background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.2)' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#f87171', marginBottom: 6 }}>
                   ⚠ {raisePrompt.waste_type} in {raisePrompt.area} — {raisePrompt.count}× this week
                 </p>
-                <p className="text-xs mb-2.5" style={{ color: 'var(--text-2)' }}>
-                  Same waste, same area. Send to a portfolio to evaluate before committing to a project.
-                </p>
+                <p style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>Same waste, same area. Send to a portfolio to evaluate before committing to a project.</p>
                 {!showCreatePf ? (
                   <>
                     <select value={ideaPortfolio} onChange={e => setIdeaPortfolio(e.target.value)}
-                      className="w-full text-xs rounded-lg px-2.5 py-1.5 mb-1 border"
-                      style={{ background: 'var(--bg-input)', borderColor: 'var(--border2)', color: 'var(--text-1)' }}>
+                      style={{ width: '100%', fontSize: 12, borderRadius: 8, padding: '6px 10px', marginBottom: 6, background: '#18181c', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2', boxSizing: 'border-box' }}>
                       <option value="">{portfolios.length > 0 ? 'Select portfolio…' : 'No portfolios yet'}</option>
                       {portfolios.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
-                    <button onClick={() => setShowCreatePf(true)}
-                      className="text-[10px] font-semibold mb-2 block"
-                      style={{ color: '#E8820C' }}>
-                      + Create new portfolio
-                    </button>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => sendAsIdea({
-                          title: `${raisePrompt.waste_type} Waste — ${area}`,
-                          waste_type: raisePrompt.waste_type,
-                          areaVal: area,
-                          source: 'pattern',
-                          description: `${raisePrompt.count} occurrences in 7 days. Last observed: ${lastObs?.text?.slice(0, 80) || ''}`,
-                        })}
+                    <button onClick={() => setShowCreatePf(true)} style={{ fontSize: 11, fontWeight: 700, color: '#f97316', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 8, display: 'block' }}>+ Create new portfolio</button>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => sendAsIdea({ title: `${raisePrompt.waste_type} Waste — ${area}`, waste_type: raisePrompt.waste_type, areaVal: area, source: 'pattern', description: `${raisePrompt.count} occurrences in 7 days. Last observed: ${lastObs?.text?.slice(0, 80) || ''}` })}
                         disabled={!ideaPortfolio || sendingIdea}
-                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-40"
-                        style={{ background: '#DC2626' }}>
+                        style={{ flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 12, fontWeight: 700, color: 'white', background: '#DC2626', border: 'none', cursor: !ideaPortfolio || sendingIdea ? 'not-allowed' : 'pointer', opacity: !ideaPortfolio || sendingIdea ? 0.4 : 1 }}>
                         {sendingIdea ? 'Sending…' : 'Send as Idea →'}
                       </button>
-                      <button onClick={() => setRaisePrompt(null)}
-                        className="px-3 py-1.5 rounded-lg text-xs"
-                        style={{ background: 'var(--bg-input)', color: 'var(--text-3)' }}>
-                        Dismiss
-                      </button>
+                      <button onClick={() => setRaisePrompt(null)} style={{ padding: '7px 12px', borderRadius: 8, fontSize: 12, background: 'rgba(255,255,255,0.04)', color: '#8b8b97', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>Dismiss</button>
                     </div>
                   </>
                 ) : (
-                  <div className="rounded-lg p-2.5 mb-2 space-y-2" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
-                    <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>New Portfolio</div>
-                    <input value={newPfName} onChange={e => setNewPfName(e.target.value)}
-                      placeholder="Portfolio name…"
-                      className="w-full text-xs rounded-lg px-2.5 py-1.5 border"
-                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border2)', color: 'var(--text-1)' }} />
+                  <div style={{ borderRadius: 10, padding: 12, marginBottom: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#4a4a57', marginBottom: 8 }}>New Portfolio</div>
+                    <input value={newPfName} onChange={e => setNewPfName(e.target.value)} placeholder="Portfolio name…"
+                      style={{ width: '100%', boxSizing: 'border-box', fontSize: 12, borderRadius: 8, padding: '6px 10px', marginBottom: 6, background: '#111114', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }} />
                     <select value={newPfArea} onChange={e => setNewPfArea(e.target.value)}
-                      className="w-full text-xs rounded-lg px-2.5 py-1.5 border"
-                      style={{ background: 'var(--bg-card)', borderColor: 'var(--border2)', color: 'var(--text-1)' }}>
+                      style={{ width: '100%', boxSizing: 'border-box', fontSize: 12, borderRadius: 8, padding: '6px 10px', marginBottom: 8, background: '#111114', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }}>
                       {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                     </select>
-                    <div className="flex gap-2">
-                      <button onClick={() => createPortfolioInline()}
-                        disabled={!newPfName.trim() || creatingPf}
-                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-40"
-                        style={{ background: '#E8820C' }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => createPortfolioInline()} disabled={!newPfName.trim() || creatingPf}
+                        style={{ flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 12, fontWeight: 700, color: 'white', background: '#f97316', border: 'none', cursor: 'pointer', opacity: !newPfName.trim() || creatingPf ? 0.4 : 1 }}>
                         {creatingPf ? 'Creating…' : 'Create →'}
                       </button>
                       <button onClick={() => setShowCreatePf(false)}
-                        className="px-3 py-1.5 rounded-lg text-xs"
-                        style={{ background: 'transparent', color: 'var(--text-3)' }}>
-                        Back
-                      </button>
+                        style={{ padding: '7px 12px', borderRadius: 8, fontSize: 12, background: 'transparent', color: '#8b8b97', border: 'none', cursor: 'pointer' }}>Back</button>
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Idea sent confirmation */}
             {ideaSent && (
-              <div className="mt-3 rounded-xl p-3 text-center border" style={{ background: 'rgba(74,222,128,0.08)', borderColor: 'rgba(74,222,128,0.2)' }}>
-                <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>✓ Idea added to {ideaSent.portfolioName}</p>
-                <p className="text-[11px] mt-1" style={{ color: 'var(--text-3)' }}>Go to Portfolio → Ideas to review and define it</p>
+              <div style={{ marginTop: 14, borderRadius: 10, padding: 14, textAlign: 'center', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#4ade80' }}>✓ Idea added to {ideaSent.portfolioName}</p>
+                <p style={{ fontSize: 11, marginTop: 4, color: '#8b8b97' }}>Go to Portfolio → Ideas to review and define it</p>
                 <button onClick={() => { onNavigate?.('portfolio'); setIdeaSent(null) }}
-                  className="mt-2 text-xs font-semibold px-3 py-1 rounded-lg"
-                  style={{ background: 'rgba(74,222,128,0.15)', color: '#4ade80' }}>
+                  style={{ marginTop: 8, fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 8, background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: 'none', cursor: 'pointer' }}>
                   Open Portfolio →
                 </button>
               </div>
             )}
 
-            {/* Linked-at-submit confirmation */}
             {lastObs?.linkedProjectName && !clueAdded && (
-              <div className="mt-3 rounded-xl p-3 border" style={{ background: 'rgba(74,222,128,0.08)', borderColor: 'rgba(74,222,128,0.2)' }}>
-                <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>✓ Linked to {lastObs.linkedProjectName}</p>
-                <p className="text-[11px] mt-1" style={{ color: 'var(--text-3)' }}>Added as a clue to the project charter</p>
+              <div style={{ marginTop: 14, borderRadius: 10, padding: 14, background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#4ade80' }}>✓ Linked to {lastObs.linkedProjectName}</p>
+                <p style={{ fontSize: 11, marginTop: 4, color: '#8b8b97' }}>Added as a clue to the project charter</p>
               </div>
             )}
 
-            {/* Link last observation as a clue to an existing project (post-submit, only if not already linked) */}
             {lastObs && !lastObs.linkedProjectName && !clueAdded && projects.length > 0 && (
-              <div className="mt-3 rounded-xl p-3 border" style={{ background: 'rgba(59,127,222,0.06)', borderColor: 'rgba(59,127,222,0.2)' }}>
-                <p className="text-xs font-semibold mb-1" style={{ color: '#60a5fa' }}>Add to a project as a clue?</p>
-                <p className="text-[11px] mb-2 truncate" style={{ color: 'var(--text-3)' }}>
-                  "{lastObs.text.slice(0, 55)}{lastObs.text.length > 55 ? '…' : ''}"
-                </p>
+              <div style={{ marginTop: 14, borderRadius: 10, padding: 14, background: 'rgba(59,127,222,0.06)', border: '1px solid rgba(59,127,222,0.2)' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#60a5fa', marginBottom: 6 }}>Add to a project as a clue?</p>
+                <p style={{ fontSize: 11, color: '#8b8b97', marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>"{lastObs.text.slice(0, 55)}{lastObs.text.length > 55 ? '…' : ''}"</p>
                 <select value={clueProject} onChange={e => setClueProject(e.target.value)}
-                  className="w-full text-xs rounded-lg px-2.5 py-1.5 mb-2 border"
-                  style={{ background: 'var(--bg-input)', borderColor: 'var(--border2)', color: 'var(--text-1)' }}>
+                  style={{ width: '100%', boxSizing: 'border-box', fontSize: 12, borderRadius: 8, padding: '6px 10px', marginBottom: 8, background: '#18181c', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }}>
                   <option value="">Select project…</option>
                   {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                 </select>
-                <div className="flex gap-2">
+                <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={addClueToProject} disabled={!clueProject || addingClue}
-                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-40"
-                    style={{ background: '#3B7FDE' }}>
+                    style={{ flex: 1, padding: '7px 0', borderRadius: 8, fontSize: 12, fontWeight: 700, color: 'white', background: '#3B7FDE', border: 'none', cursor: 'pointer', opacity: !clueProject || addingClue ? 0.4 : 1 }}>
                     {addingClue ? 'Adding…' : 'Add as Clue →'}
                   </button>
                   <button onClick={() => setLastObs(null)}
-                    className="px-3 py-1.5 rounded-lg text-xs"
-                    style={{ background: 'var(--bg-input)', color: 'var(--text-3)' }}>
+                    style={{ padding: '7px 12px', borderRadius: 8, fontSize: 12, background: 'rgba(255,255,255,0.04)', color: '#8b8b97', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>
                     Dismiss
                   </button>
                 </div>
               </div>
             )}
             {clueAdded && (
-              <div className="mt-3 rounded-xl p-3 text-center" style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}>
-                <p className="text-xs font-semibold" style={{ color: '#4ade80' }}>✓ Clue added to project</p>
+              <div style={{ marginTop: 14, borderRadius: 10, padding: 14, textAlign: 'center', background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.2)' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#4ade80' }}>✓ Clue added to project</p>
               </div>
             )}
           </div>
 
-          {/* Active projects — quick nav after logging */}
-          {projects.length > 0 && (
-            <div className="card p-5">
-              <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--text-1)' }}>Active Projects</h3>
-              <div className="space-y-2">
-                {projects.slice(0, 5).map(p => (
-                  <button key={p.id} onClick={() => onNavigate?.('projects', p)}
-                    className="w-full flex items-center justify-between rounded-lg px-3 py-2 text-left transition-all"
-                    style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
-                    <div className="min-w-0">
-                      <div className="text-xs font-medium truncate" style={{ color: 'var(--text-1)' }}>{p.title}</div>
-                      <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>{p.stage} · {p.area}</div>
-                    </div>
-                    <span className="text-xs ml-2 flex-shrink-0" style={{ color: 'var(--text-3)' }}>→</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Top waste this week */}
+          {/* Top waste bar */}
           {topWaste.length > 0 && (
-            <div className="card p-5">
-              <h3 className="font-semibold text-sm mb-3" style={{ color: 'var(--text-1)' }}>Top Waste This Week</h3>
-              <div className="space-y-2.5">
+            <div style={{ ...glass, padding: 18 }}>
+              <h3 style={{ fontFamily: 'Geist, sans-serif', fontSize: 14, fontWeight: 700, color: '#f0f0f2', marginBottom: 14 }}>Top Waste This Week</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {topWaste.map(([waste, count]) => {
                   const color = WASTE_COLORS[waste] || '#6B7280'
                   const pct   = Math.round((count / last7.length) * 100)
                   return (
                     <div key={waste}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium" style={{ color }}>{waste}</span>
-                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>{count}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color }}>{waste}</span>
+                        <span style={{ fontSize: 12, color: '#4a4a57' }}>{count}</span>
                       </div>
-                      <div className="h-1.5 rounded-full" style={{ background: 'var(--bg-input)' }}>
-                        <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                      <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.04)' }}>
+                        <div style={{ height: 4, borderRadius: 999, width: `${pct}%`, background: color, transition: 'width 600ms ease' }} />
                       </div>
                     </div>
                   )
@@ -688,107 +585,130 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
           )}
         </div>
 
-        {/* ─── Observations list ─── */}
-        <div className="col-span-3 space-y-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            {['All', ...AREAS].map(a => (
-              <button key={a} onClick={() => setFilterArea(a)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                style={{
-                  background: filterArea === a ? 'var(--text-1)' : 'var(--bg-input)',
-                  color:      filterArea === a ? 'var(--bg-page)' : 'var(--text-2)',
-                  border:     '1px solid var(--border)',
-                }}>
-                {a === 'All' ? 'All areas' : a}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1.5 flex-wrap">
-            {['All', ...WASTE_TYPES].map(w => (
-              <button key={w} onClick={() => setFilterWaste(w)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                style={filterWaste === w && w !== 'All'
-                  ? { background: WASTE_COLORS[w], color: 'white',             border: `1px solid ${WASTE_COLORS[w]}` }
-                  : filterWaste === w
-                    ? { background: 'var(--text-1)', color: 'var(--bg-page)',  border: '1px solid var(--border)' }
-                    : { background: 'var(--bg-input)', color: 'var(--text-2)', border: '1px solid var(--border)' }
-                }>
-                {w === 'All' ? 'All waste' : w}
-              </button>
-            ))}
-          </div>
-
-          <div className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>{filtered.length} observations</div>
-
-          {filtered.length === 0 ? (
-            <div className="card p-12 text-center">
-              <div className="text-4xl mb-3" style={{ color: 'var(--text-3)' }}>◎</div>
-              <div className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>No observations yet</div>
-              <div className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>Log your first floor walk observation on the left</div>
+        {/* Middle col: active projects + filters */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {projects.length > 0 && (
+            <div style={{ ...glass, padding: 18 }}>
+              <h3 style={{ fontFamily: 'Geist, sans-serif', fontSize: 14, fontWeight: 700, color: '#f0f0f2', marginBottom: 14 }}>Active Projects</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {projects.slice(0, 6).map(p => (
+                  <button key={p.id} onClick={() => onNavigate?.('projects', p)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 8, padding: '9px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer', textAlign: 'left', transition: 'background 150ms' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#f0f0f2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                      <div style={{ fontSize: 10, color: '#4a4a57', marginTop: 2 }}>{p.stage} · {p.area}</div>
+                    </div>
+                    <span style={{ fontSize: 12, color: '#4a4a57', marginLeft: 8, flexShrink: 0 }}>→</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {filtered.slice(0, 60).map(o => (
+          )}
+
+          {/* Area filter */}
+          <div style={{ ...glass, padding: 18 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#4a4a57', marginBottom: 10 }}>Filter by Area</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+              {['All', ...AREAS].map(a => (
+                <button key={a} onClick={() => setFilterArea(a)}
+                  style={{ padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    background: filterArea === a ? '#f0f0f2' : 'rgba(255,255,255,0.04)',
+                    color: filterArea === a ? '#09090b' : '#8b8b97',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}>
+                  {a === 'All' ? 'All areas' : a}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#4a4a57', marginBottom: 10 }}>Filter by Waste</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {['All', ...WASTE_TYPES].map(w => (
+                <button key={w} onClick={() => setFilterWaste(w)}
+                  style={{ padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    background: filterWaste === w && w !== 'All' ? WASTE_COLORS[w] : filterWaste === w ? '#f0f0f2' : 'rgba(255,255,255,0.04)',
+                    color: filterWaste === w && w !== 'All' ? 'white' : filterWaste === w ? '#09090b' : '#8b8b97',
+                    border: filterWaste === w && w !== 'All' ? `1px solid ${WASTE_COLORS[w]}` : '1px solid rgba(255,255,255,0.08)',
+                  }}>
+                  {w === 'All' ? 'All waste' : w}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right col: active observations */}
+        <div style={{ ...glass, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '80vh' }}>
+          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ fontFamily: 'Geist, sans-serif', fontSize: 15, fontWeight: 700, color: '#f0f0f2' }}>Active Observations</h3>
+              <span style={{ fontSize: 11, color: '#4a4a57', background: 'rgba(255,255,255,0.04)', padding: '2px 8px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.06)' }}>
+                {filtered.length}
+              </span>
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {filtered.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 36, color: '#4a4a57', display: 'block', marginBottom: 12 }}>radio_button_checked</span>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#4a4a57' }}>No observations yet</div>
+                <div style={{ fontSize: 11, marginTop: 6, color: '#4a4a57' }}>Log your first floor walk observation</div>
+              </div>
+            ) : (
+              filtered.slice(0, 60).map(o => (
                 <ObsCard key={o.id} obs={o} onDelete={handleDelete}
                   sentAsIdea={sentIdeaIds.has(o.id)}
                   onSendAsIdea={(obs) => openObsModal(obs)} />
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Obs → Idea modal (AI-powered) */}
+      {/* Obs → Idea modal */}
       {pendingIdeaObs && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={closeObsModal}>
-          <div className="w-full max-w-md rounded-2xl shadow-2xl fade-in"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+          <div style={{ width: '100%', maxWidth: 440, borderRadius: 18, boxShadow: '0 24px 60px rgba(0,0,0,0.6)', background: '#111114', border: '1px solid rgba(255,255,255,0.08)' }}
             onClick={e => e.stopPropagation()}>
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 pt-5 pb-3">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 20px 12px' }}>
               <div>
-                <h3 className="font-bold text-sm" style={{ color: 'var(--text-1)' }}>Send as Idea</h3>
-                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>AI is converting your observation</p>
+                <h3 style={{ fontFamily: 'Geist, sans-serif', fontSize: 15, fontWeight: 700, color: '#f0f0f2' }}>Send as Idea</h3>
+                <p style={{ fontSize: 11, marginTop: 2, color: '#4a4a57' }}>AI is converting your observation</p>
               </div>
               <button onClick={closeObsModal}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
-                style={{ background: 'var(--bg-input)', color: 'var(--text-2)' }}>✕</button>
+                style={{ width: 28, height: 28, borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, background: 'rgba(255,255,255,0.06)', color: '#8b8b97', border: 'none', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* Original observation */}
-            <div className="mx-5 mb-4 rounded-xl p-3" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
-              <div className="flex gap-1.5 mb-1.5">
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{ background: `${WASTE_COLORS[pendingIdeaObs.waste_type] || '#6B7280'}18`, color: WASTE_COLORS[pendingIdeaObs.waste_type] || '#6B7280' }}>
+            <div style={{ margin: '0 20px 16px', borderRadius: 10, padding: 12, background: '#18181c', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: `${WASTE_COLORS[pendingIdeaObs.waste_type] || '#6B7280'}18`, color: WASTE_COLORS[pendingIdeaObs.waste_type] || '#6B7280' }}>
                   {pendingIdeaObs.waste_type}
                 </span>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{ background: 'var(--bg-page)', color: 'var(--text-3)' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', color: '#8b8b97' }}>
                   {pendingIdeaObs.area}
                 </span>
               </div>
-              <p className="text-xs leading-relaxed" style={{ color: 'var(--text-2)' }}>
+              <p style={{ fontSize: 12, color: '#8b8b97', lineHeight: 1.5 }}>
                 {pendingIdeaObs.text.slice(0, 140)}{pendingIdeaObs.text.length > 140 ? '…' : ''}
               </p>
             </div>
 
-            {/* Loading state */}
             {converting && (
-              <div className="px-5 pb-5 flex items-center gap-3">
-                <span className="animate-spin text-lg" style={{ color: '#a78bfa' }}>◈</span>
+              <div style={{ padding: '0 20px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 20, color: '#a78bfa', animation: 'spin 1s linear infinite' }}>◈</span>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Analysing observation…</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Converting to idea · evaluating portfolio fit</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#f0f0f2' }}>Analysing observation…</p>
+                  <p style={{ fontSize: 11, marginTop: 2, color: '#4a4a57' }}>Converting to idea · evaluating portfolio fit</p>
                 </div>
               </div>
             )}
 
-            {/* Error state */}
             {!converting && converted?.error && (
-              <div className="px-5 pb-5">
-                <p className="text-xs mb-3" style={{ color: '#f87171' }}>AI conversion failed. You can still send manually.</p>
+              <div style={{ padding: '0 20px 20px' }}>
+                <p style={{ fontSize: 12, color: '#f87171', marginBottom: 12 }}>AI conversion failed. You can still send manually.</p>
                 <ManualSendForm
                   portfolios={portfolios} ideaPortfolio={ideaPortfolio} setIdeaPortfolio={setIdeaPortfolio}
                   showCreatePf={showCreatePf} setShowCreatePf={setShowCreatePf}
@@ -800,111 +720,87 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
                     await sendAsIdea({ title: `${pendingIdeaObs.waste_type} Waste — ${pendingIdeaObs.area}`, waste_type: pendingIdeaObs.waste_type, areaVal: pendingIdeaObs.area, source: 'floor_walk', description: pendingIdeaObs.text, obsId: pendingIdeaObs.id })
                     closeObsModal()
                   }}
-                  onCancel={closeObsModal}
-                  pColor="#E8820C"
-                  areas={AREAS}
+                  onCancel={closeObsModal} pColor="#f97316" areas={AREAS}
                 />
               </div>
             )}
 
-            {/* AI result */}
             {!converting && converted && !converted.error && (
-              <div className="px-5 pb-5 space-y-4">
-
-                {/* Idea draft */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: '#a78bfa' }}>✦ AI Idea Draft</span>
-                    <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>edit title if needed</span>
+              <div style={{ padding: '0 20px 20px' }}>
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#a78bfa' }}>✦ AI Idea Draft</span>
+                    <span style={{ fontSize: 10, color: '#4a4a57' }}>edit title if needed</span>
                   </div>
-                  <input
-                    value={editedTitle}
-                    onChange={e => setEditedTitle(e.target.value)}
-                    className="w-full text-sm font-semibold rounded-xl border px-3 py-2 mb-2"
-                    style={{ background: 'var(--bg-input)', borderColor: 'rgba(167,139,250,0.4)', color: 'var(--text-1)' }}
-                  />
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
-                    {converted.idea?.description}
-                  </p>
-                  <div className="flex gap-1.5 mt-2">
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: 'var(--bg-input)', color: 'var(--text-3)' }}>{converted.idea?.area}</span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: 'var(--bg-input)', color: 'var(--text-3)' }}>{converted.idea?.waste_type}</span>
+                  <input value={editedTitle} onChange={e => setEditedTitle(e.target.value)}
+                    style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, fontWeight: 600, borderRadius: 10, padding: '9px 12px', marginBottom: 8, background: '#18181c', border: '1px solid rgba(167,139,250,0.4)', color: '#f0f0f2' }} />
+                  <p style={{ fontSize: 12, color: '#8b8b97', lineHeight: 1.5 }}>{converted.idea?.description}</p>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', color: '#8b8b97' }}>{converted.idea?.area}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'rgba(255,255,255,0.04)', color: '#8b8b97' }}>{converted.idea?.waste_type}</span>
                   </div>
                 </div>
 
-                {/* Portfolio recommendation */}
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--text-3)' }}>Portfolio</div>
-
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#4a4a57', marginBottom: 8 }}>Portfolio</div>
                   {converted.recommendation?.action === 'use_existing' && (
-                    <div className="space-y-2">
-                      <div className="rounded-xl p-3" style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)' }}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold" style={{ color: '#4ade80' }}>✓ Match found</span>
-                          <span className="text-xs font-semibold" style={{ color: 'var(--text-1)' }}>{converted.recommendation.portfolio_name}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ borderRadius: 10, padding: 12, background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#4ade80' }}>✓ Match found</span>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#f0f0f2' }}>{converted.recommendation.portfolio_name}</span>
                         </div>
-                        <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{converted.recommendation.reason}</p>
+                        <p style={{ fontSize: 11, color: '#8b8b97' }}>{converted.recommendation.reason}</p>
                       </div>
                       <select value={ideaPortfolio} onChange={e => setIdeaPortfolio(e.target.value)}
-                        className="w-full text-xs rounded-xl border px-3 py-2"
-                        style={{ background: 'var(--bg-input)', borderColor: 'var(--border2)', color: 'var(--text-1)' }}>
+                        style={{ width: '100%', boxSizing: 'border-box', fontSize: 12, borderRadius: 10, padding: '8px 12px', background: '#18181c', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }}>
                         <option value="">Override portfolio…</option>
                         {portfolios.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     </div>
                   )}
-
                   {converted.recommendation?.action === 'create_new' && (
-                    <div className="space-y-2">
-                      <div className="rounded-xl p-3" style={{ background: 'rgba(232,130,12,0.07)', border: '1px solid rgba(232,130,12,0.2)' }}>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold" style={{ color: '#E8820C' }}>⚠ No matching portfolio</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ borderRadius: 10, padding: 12, background: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.2)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#f97316' }}>⚠ No matching portfolio</span>
                         </div>
-                        <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>{converted.recommendation.reason}</p>
+                        <p style={{ fontSize: 11, color: '#8b8b97' }}>{converted.recommendation.reason}</p>
                       </div>
                       {!showCreatePf ? (
-                        <div className="space-y-2">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           <button onClick={() => setShowCreatePf(true)}
-                            className="w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-left"
-                            style={{ background: 'rgba(232,130,12,0.08)', border: '1px solid rgba(232,130,12,0.25)' }}>
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 10, padding: '10px 14px', background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.22)', cursor: 'pointer' }}>
                             <div>
-                              <p className="text-xs font-bold" style={{ color: '#E8820C' }}>+ Create "{converted.recommendation.new_name}"</p>
-                              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>{converted.recommendation.new_area} · {converted.recommendation.new_objective?.slice(0, 55)}…</p>
+                              <p style={{ fontSize: 12, fontWeight: 700, color: '#f97316' }}>+ Create "{converted.recommendation.new_name}"</p>
+                              <p style={{ fontSize: 10, marginTop: 2, color: '#8b8b97' }}>{converted.recommendation.new_area} · {converted.recommendation.new_objective?.slice(0, 55)}…</p>
                             </div>
-                            <span className="text-xs ml-2 flex-shrink-0" style={{ color: '#E8820C' }}>→</span>
+                            <span style={{ fontSize: 12, color: '#f97316', marginLeft: 8 }}>→</span>
                           </button>
                           {portfolios.length > 0 && (
                             <select value={ideaPortfolio} onChange={e => setIdeaPortfolio(e.target.value)}
-                              className="w-full text-xs rounded-xl border px-3 py-2"
-                              style={{ background: 'var(--bg-input)', borderColor: 'var(--border2)', color: 'var(--text-1)' }}>
+                              style={{ width: '100%', boxSizing: 'border-box', fontSize: 12, borderRadius: 10, padding: '8px 12px', background: '#18181c', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }}>
                               <option value="">Or send to existing portfolio…</option>
                               {portfolios.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
                           )}
                         </div>
                       ) : (
-                        <div className="rounded-xl p-3 space-y-2" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
-                          <div className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>New Portfolio</div>
+                        <div style={{ borderRadius: 10, padding: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#4a4a57', marginBottom: 10 }}>New Portfolio</div>
                           <input value={newPfName} onChange={e => setNewPfName(e.target.value)}
-                            className="w-full text-sm rounded-xl border px-3 py-2"
-                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border2)', color: 'var(--text-1)' }} />
+                            style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, borderRadius: 10, padding: '9px 12px', marginBottom: 8, background: '#111114', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }} />
                           <select value={newPfArea} onChange={e => setNewPfArea(e.target.value)}
-                            className="w-full text-sm rounded-xl border px-3 py-2"
-                            style={{ background: 'var(--bg-card)', borderColor: 'var(--border2)', color: 'var(--text-1)' }}>
+                            style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, borderRadius: 10, padding: '9px 12px', marginBottom: 10, background: '#111114', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }}>
                             {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                           </select>
-                          <div className="flex gap-2">
-                            <button onClick={() => createPortfolioInline()}
-                              disabled={!newPfName.trim() || creatingPf}
-                              className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-40"
-                              style={{ background: '#E8820C' }}>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => createPortfolioInline()} disabled={!newPfName.trim() || creatingPf}
+                              style={{ flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 700, color: 'white', background: '#f97316', border: 'none', cursor: 'pointer', opacity: !newPfName.trim() || creatingPf ? 0.4 : 1 }}>
                               {creatingPf ? 'Creating…' : 'Create & Select →'}
                             </button>
                             <button onClick={() => setShowCreatePf(false)}
-                              className="px-3 py-1.5 rounded-lg text-xs"
-                              style={{ color: 'var(--text-3)' }}>Back</button>
+                              style={{ padding: '9px 14px', borderRadius: 10, fontSize: 13, background: 'transparent', color: '#8b8b97', border: 'none', cursor: 'pointer' }}>Back</button>
                           </div>
                         </div>
                       )}
@@ -912,23 +808,14 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
                   )}
                 </div>
 
-                {/* Send button */}
                 <button
                   onClick={async () => {
-                    await sendAsIdea({
-                      title: editedTitle || converted.idea?.title || `${pendingIdeaObs.waste_type} Waste — ${pendingIdeaObs.area}`,
-                      waste_type: converted.idea?.waste_type || pendingIdeaObs.waste_type,
-                      areaVal: converted.idea?.area || pendingIdeaObs.area,
-                      source: 'floor_walk',
-                      description: converted.idea?.description || pendingIdeaObs.text,
-                      obsId: pendingIdeaObs.id,
-                    })
+                    await sendAsIdea({ title: editedTitle || converted.idea?.title || `${pendingIdeaObs.waste_type} Waste — ${pendingIdeaObs.area}`, waste_type: converted.idea?.waste_type || pendingIdeaObs.waste_type, areaVal: converted.idea?.area || pendingIdeaObs.area, source: 'floor_walk', description: converted.idea?.description || pendingIdeaObs.text, obsId: pendingIdeaObs.id })
                     closeObsModal()
                   }}
                   disabled={!ideaPortfolio || sendingIdea}
-                  className="w-full py-3 rounded-xl text-white text-sm font-bold disabled:opacity-40"
-                  style={{ background: '#E8820C' }}>
-                  {sendingIdea ? 'Sending…' : ideaPortfolio ? `Send to Portfolio →` : 'Select a portfolio first'}
+                  style={{ width: '100%', padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 700, color: 'white', border: 'none', cursor: !ideaPortfolio || sendingIdea ? 'not-allowed' : 'pointer', opacity: !ideaPortfolio || sendingIdea ? 0.4 : 1, background: 'linear-gradient(135deg,#f97316,#ea580c)', transition: 'opacity 150ms' }}>
+                  {sendingIdea ? 'Sending…' : ideaPortfolio ? 'Send to Portfolio →' : 'Select a portfolio first'}
                 </button>
               </div>
             )}
@@ -943,47 +830,41 @@ function ManualSendForm({ portfolios, ideaPortfolio, setIdeaPortfolio, showCreat
   newPfName, setNewPfName, newPfArea, setNewPfArea, creatingPf, createPortfolioInline,
   sendingIdea, onSend, onCancel, pColor, areas }) {
   return (
-    <div className="space-y-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {!showCreatePf ? (
         <>
           <select value={ideaPortfolio} onChange={e => setIdeaPortfolio(e.target.value)}
-            className="w-full text-sm rounded-xl border px-3 py-2.5"
-            style={{ background: 'var(--bg-input)', borderColor: 'var(--border2)', color: 'var(--text-1)' }}>
+            style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, borderRadius: 10, padding: '9px 12px', background: '#18181c', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }}>
             <option value="">{portfolios.length > 0 ? 'Select portfolio…' : 'No portfolios yet'}</option>
             {portfolios.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
-          <button onClick={() => setShowCreatePf(true)} className="text-xs font-semibold" style={{ color: pColor }}>
+          <button onClick={() => setShowCreatePf(true)} style={{ fontSize: 12, fontWeight: 700, color: pColor, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
             + Create new portfolio
           </button>
         </>
       ) : (
-        <div className="rounded-xl p-3 space-y-2" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
+        <div style={{ borderRadius: 10, padding: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <input value={newPfName} onChange={e => setNewPfName(e.target.value)} placeholder="Portfolio name…"
-            className="w-full text-sm rounded-xl border px-3 py-2"
-            style={{ background: 'var(--bg-card)', borderColor: 'var(--border2)', color: 'var(--text-1)' }} />
+            style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, borderRadius: 10, padding: '9px 12px', marginBottom: 8, background: '#111114', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }} />
           <select value={newPfArea} onChange={e => setNewPfArea(e.target.value)}
-            className="w-full text-sm rounded-xl border px-3 py-2"
-            style={{ background: 'var(--bg-card)', borderColor: 'var(--border2)', color: 'var(--text-1)' }}>
+            style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, borderRadius: 10, padding: '9px 12px', marginBottom: 10, background: '#111114', border: '1px solid rgba(255,255,255,0.08)', color: '#f0f0f2' }}>
             {areas.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
-          <div className="flex gap-2">
+          <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => createPortfolioInline()} disabled={!newPfName.trim() || creatingPf}
-              className="flex-1 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-40"
-              style={{ background: pColor }}>
+              style={{ flex: 1, padding: '8px 0', borderRadius: 8, fontSize: 12, fontWeight: 700, color: 'white', background: pColor, border: 'none', cursor: 'pointer', opacity: !newPfName.trim() || creatingPf ? 0.4 : 1 }}>
               {creatingPf ? 'Creating…' : 'Create & Select →'}
             </button>
-            <button onClick={() => setShowCreatePf(false)} className="px-3 py-1.5 rounded-lg text-xs" style={{ color: 'var(--text-3)' }}>Back</button>
+            <button onClick={() => setShowCreatePf(false)} style={{ padding: '8px 14px', borderRadius: 8, fontSize: 12, color: '#8b8b97', background: 'transparent', border: 'none', cursor: 'pointer' }}>Back</button>
           </div>
         </div>
       )}
-      <div className="flex gap-2">
+      <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={onSend} disabled={!ideaPortfolio || sendingIdea}
-          className="flex-1 py-2.5 rounded-xl text-white text-sm font-bold disabled:opacity-40"
-          style={{ background: pColor }}>
+          style={{ flex: 1, padding: '10px 0', borderRadius: 10, fontSize: 13, fontWeight: 700, color: 'white', background: pColor, border: 'none', cursor: !ideaPortfolio || sendingIdea ? 'not-allowed' : 'pointer', opacity: !ideaPortfolio || sendingIdea ? 0.4 : 1 }}>
           {sendingIdea ? 'Sending…' : 'Send as Idea →'}
         </button>
-        <button onClick={onCancel} className="px-4 py-2.5 rounded-xl text-sm"
-          style={{ background: 'var(--bg-input)', color: 'var(--text-3)' }}>Cancel</button>
+        <button onClick={onCancel} style={{ padding: '10px 16px', borderRadius: 10, fontSize: 13, background: 'rgba(255,255,255,0.04)', color: '#8b8b97', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}>Cancel</button>
       </div>
     </div>
   )
