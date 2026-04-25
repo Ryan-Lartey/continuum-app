@@ -9,11 +9,19 @@ import PortfolioView from './views/PortfolioView.jsx'
 import DataView from './views/DataView.jsx'
 import ReportsView from './views/ReportsView.jsx'
 import ProcessMapsView from './views/ProcessMapsView.jsx'
+import LoginView from './views/LoginView.jsx'
 import { api, setApiDemoMode } from './lib/api.js'
+import { isLoggedIn, getRole, getName, clearAuth } from './lib/auth.js'
 import GlobalSearch from './components/GlobalSearch.jsx'
 
 export default function App() {
-  const [view, setView] = useState('home')
+  const [authed, setAuthed] = useState(isLoggedIn)
+  const [role, setRole]     = useState(getRole)
+  const [userName, setUserName] = useState(getName)
+  const [view, setView]     = useState(() => {
+    const r = getRole()
+    return r === 'viewer' ? 'data' : 'home'
+  })
   const [agentOpen, setAgentOpen] = useState(null)
   const [openProject, setOpenProject] = useState(null)
   const [openPortfolio, setOpenPortfolio] = useState(null)
@@ -53,6 +61,21 @@ export default function App() {
     window.location.reload()
   }
 
+  function handleLogin(newRole, newName) {
+    setRole(newRole)
+    setUserName(newName)
+    setAuthed(true)
+    setView(newRole === 'viewer' ? 'data' : 'home')
+  }
+
+  function handleLogout() {
+    clearAuth()
+    setAuthed(false)
+    setRole(null)
+    setUserName(null)
+    setView('home')
+  }
+
   function handleOpenAgent(agentId, initialMessage) {
     setAgentOpen({ id: agentId, message: initialMessage })
   }
@@ -82,6 +105,8 @@ export default function App() {
     },
   }
 
+  if (!authed) return <LoginView onLogin={handleLogin} />
+
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'radial-gradient(ellipse 100% 60% at 20% 0%, rgba(249,115,22,0.035) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(99,102,241,0.025) 0%, transparent 50%), var(--bg-page)' }}>
       <SideNav
@@ -93,6 +118,9 @@ export default function App() {
         signals={signals}
         demoMode={demoMode}
         onToggleDemo={toggleDemoMode}
+        role={role}
+        userName={userName}
+        onLogout={handleLogout}
       />
 
       <main className="flex-1 overflow-y-auto min-w-0 flex flex-col">
@@ -117,11 +145,11 @@ export default function App() {
           </div>
         )}
         <div className="p-7 flex-1">
-          {view === 'home'      && <HomeView     {...viewProps} />}
-          {view === 'floor'     && <FloorView    {...viewProps} />}
-          {view === 'projects'  && <ProjectsView {...viewProps} openProject={openProject} />}
+          {view === 'home'      && role === 'admin' && <HomeView     {...viewProps} />}
+          {view === 'floor'     && <FloorView    {...viewProps} readOnly={role === 'viewer'} />}
+          {view === 'projects'  && <ProjectsView {...viewProps} openProject={openProject} readOnly={role === 'viewer'} />}
           {view === 'portfolio' && !openPortfolio && (
-            <PortfolioListView onOpenPortfolio={p => setOpenPortfolio(p)} />
+            <PortfolioListView onOpenPortfolio={p => setOpenPortfolio(p)} readOnly={role === 'viewer'} />
           )}
           {view === 'portfolio' && openPortfolio && (
             <PortfolioView
@@ -129,11 +157,12 @@ export default function App() {
               onBack={() => setOpenPortfolio(null)}
               onNavigate={handleNavigate}
               demoMode={demoMode}
+              readOnly={role === 'viewer'}
             />
           )}
-          {view === 'data'          && <DataView        {...viewProps} />}
-          {view === 'reports'       && <ReportsView     {...viewProps} />}
-          {view === 'process-maps'  && <ProcessMapsView {...viewProps} />}
+          {view === 'data'          && <DataView        {...viewProps} readOnly={role === 'viewer'} />}
+          {view === 'reports'       && <ReportsView     {...viewProps} readOnly={role === 'viewer'} />}
+          {view === 'process-maps'  && <ProcessMapsView {...viewProps} readOnly={role === 'viewer'} />}
         </div>
       </main>
 

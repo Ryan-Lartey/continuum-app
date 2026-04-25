@@ -23,6 +23,8 @@ import processMapsRouter from './routes/process-maps.js'
 import sectionsRouter from './routes/sections.js'
 import { startAutomation } from './automation.js'
 import { runSync } from './services/sync.js'
+import authRoutes from './routes/auth.js'
+import { authMiddleware, requireAdmin } from './middleware/auth.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -40,6 +42,12 @@ app.use((req, res, next) => {
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
+// Auth — no token required
+app.use('/api/auth', authRoutes)
+
+// All other /api routes require a valid JWT
+app.use('/api', authMiddleware)
+
 app.use('/api/kpi', kpiRoutes)
 app.use('/api/observations', obsRoutes)
 app.use('/api/projects', projectRoutes)
@@ -56,6 +64,28 @@ app.use('/api/maps', mapsRouter)
 app.use('/api/demo', demoRoutes)
 app.use('/api/process-maps', processMapsRouter)
 app.use('/api/sections', sectionsRouter)
+
+// Block write operations for viewer role on mutating routes
+app.use('/api/kpi', (req, res, next) => {
+  if (req.method !== 'GET' && req.user?.role !== 'admin') return res.status(403).json({ error: 'Read-only access' })
+  next()
+})
+app.use('/api/observations', (req, res, next) => {
+  if (req.method !== 'GET' && req.user?.role !== 'admin') return res.status(403).json({ error: 'Read-only access' })
+  next()
+})
+app.use('/api/projects', (req, res, next) => {
+  if (req.method !== 'GET' && req.user?.role !== 'admin') return res.status(403).json({ error: 'Read-only access' })
+  next()
+})
+app.use('/api/portfolios', (req, res, next) => {
+  if (req.method !== 'GET' && req.user?.role !== 'admin') return res.status(403).json({ error: 'Read-only access' })
+  next()
+})
+app.use('/api/brief', (req, res, next) => {
+  if (req.method !== 'GET' && req.user?.role !== 'admin') return res.status(403).json({ error: 'Read-only access' })
+  next()
+})
 
 // ─── Excel sync routes ────────────────────────────────────────────────────────
 

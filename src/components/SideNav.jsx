@@ -4,15 +4,15 @@ import PresentationHotspot from './PresentationHotspot.jsx'
 import {
   LayoutDashboard, Activity, Target, Kanban,
   TrendingUp, FileBarChart, GitFork,
-  Settings, BookOpen,
+  Settings, BookOpen, LogOut,
 } from 'lucide-react'
 
-const NAV = [
-  { id: 'home',          Icon: LayoutDashboard, label: 'Dashboard'     },
+const NAV_ALL = [
+  { id: 'home',          Icon: LayoutDashboard, label: 'Dashboard',    adminOnly: true },
+  { id: 'data',          Icon: TrendingUp,      label: 'Data'          },
   { id: 'floor',         Icon: Activity,        label: 'Floor Walk'    },
   { id: 'projects',      Icon: Target,          label: 'Projects'      },
   { id: 'portfolio',     Icon: Kanban,          label: 'Portfolio'     },
-  { id: 'data',          Icon: TrendingUp,      label: 'Data'          },
   { id: 'reports',       Icon: FileBarChart,    label: 'Reports'       },
   { id: 'process-maps',  Icon: GitFork,         label: 'Process Maps'  },
 ]
@@ -53,7 +53,8 @@ function parseKpiInput(text) {
 
 const DEFAULT_TARGETS = { UPH: 100, Accuracy: 99.5, DPMO: 500, DTS: 98 }
 
-export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, onObsLogged, signals = [], demoMode = false, onToggleDemo }) {
+export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, onObsLogged, signals = [], demoMode = false, onToggleDemo, role = 'admin', userName, onLogout }) {
+  const NAV = NAV_ALL.filter(n => !n.adminOnly || role === 'admin')
   const [input, setInput]             = useState('')
   const [loading, setLoading]         = useState(false)
   const [tip, setTip]                 = useState(null)
@@ -276,11 +277,12 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
 
       <div className="flex-1" />
 
-      {/* ── Command input ── */}
+      {/* ── Command input (admin only) ── */}
       <div
         className="px-2 pb-3 pt-3 space-y-2"
         style={{ borderTop: '1px solid rgba(255,255,255,0.055)' }}
       >
+      {role !== 'admin' ? null : (<>
         {/* Tip / response box */}
         {tip && (
           <div
@@ -363,6 +365,7 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
             </div>
           </form>
         </div>
+      </>)}
 
         {/* User profile row */}
         <div className="flex items-center gap-1.5 px-1 pt-0.5">
@@ -371,69 +374,77 @@ export default function SideNav({ active, onChange, onOpenAgent, onKpiLogged, on
             style={{
               width: 20,
               height: 20,
-              background: 'linear-gradient(135deg, #f97316 0%, #c2410c 100%)',
+              background: role === 'viewer'
+                ? 'linear-gradient(135deg, #3B7FDE 0%, #1d4ed8 100%)'
+                : 'linear-gradient(135deg, #f97316 0%, #c2410c 100%)',
               fontSize: 9,
-              boxShadow: '0 1px 4px rgba(249,115,22,0.3)',
+              boxShadow: role === 'viewer' ? '0 1px 4px rgba(59,127,222,0.3)' : '0 1px 4px rgba(249,115,22,0.3)',
             }}
           >
-            R
+            {(userName || 'U')[0].toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="truncate" style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-2)', lineHeight: 1.2 }}>Ryan</div>
-            <div className="truncate" style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.2 }}>{settingsSiteName}</div>
+            <div className="truncate" style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-2)', lineHeight: 1.2 }}>{userName || 'User'}</div>
+            <div className="truncate" style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1.2 }}>
+              {role === 'viewer' ? 'Read only' : settingsSiteName}
+            </div>
           </div>
+          {role === 'admin' && (
+            <button
+              onClick={() => setShowKnowledge(true)}
+              title="Site Knowledge"
+              className="flex-shrink-0 flex items-center justify-center"
+              style={{ color: 'var(--text-3)', background: 'transparent', borderRadius: 4, padding: 3, transition: 'background 0.12s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <BookOpen size={12} strokeWidth={1.75} />
+            </button>
+          )}
+          {role === 'admin' && (
+            <button
+              onClick={() => setShowSettings(true)}
+              title="Settings"
+              className="flex-shrink-0 flex items-center justify-center"
+              style={{ color: 'var(--text-3)', background: 'transparent', borderRadius: 4, padding: 3, transition: 'background 0.12s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <Settings size={12} strokeWidth={1.75} />
+            </button>
+          )}
+          {role === 'admin' && (
+            <button
+              onClick={() => {
+                if (demoMode || window.confirm('Switching to demo mode will reload the app. Continue?')) {
+                  onToggleDemo?.()
+                }
+              }}
+              title={demoMode ? 'Exit Demo Mode' : 'Enter Demo Mode'}
+              className="flex-shrink-0 flex items-center justify-center text-[10px]"
+              style={{
+                color: demoMode ? '#fb923c' : 'var(--text-3)',
+                fontWeight: demoMode ? 700 : 400,
+                background: 'transparent',
+                borderRadius: 4,
+                padding: 3,
+                transition: 'background 0.12s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              🎭
+            </button>
+          )}
           <button
-            onClick={() => setShowKnowledge(true)}
-            title="Site Knowledge"
+            onClick={onLogout}
+            title="Sign out"
             className="flex-shrink-0 flex items-center justify-center"
-            style={{
-              color: 'var(--text-3)',
-              background: 'transparent',
-              borderRadius: 4,
-              padding: 3,
-              transition: 'background 0.12s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            style={{ color: 'var(--text-3)', background: 'transparent', borderRadius: 4, padding: 3, transition: 'background 0.12s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#f87171' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-3)' }}
           >
-            <BookOpen size={12} strokeWidth={1.75} />
-          </button>
-          <button
-            onClick={() => setShowSettings(true)}
-            title="Settings"
-            className="flex-shrink-0 flex items-center justify-center"
-            style={{
-              color: 'var(--text-3)',
-              background: 'transparent',
-              borderRadius: 4,
-              padding: 3,
-              transition: 'background 0.12s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            <Settings size={12} strokeWidth={1.75} />
-          </button>
-          <button
-            onClick={() => {
-              if (demoMode || window.confirm('Switching to demo mode will reload the app. Continue?')) {
-                onToggleDemo?.()
-              }
-            }}
-            title={demoMode ? 'Exit Demo Mode' : 'Enter Demo Mode'}
-            className="flex-shrink-0 flex items-center justify-center text-[10px]"
-            style={{
-              color: demoMode ? '#fb923c' : 'var(--text-3)',
-              fontWeight: demoMode ? 700 : 400,
-              background: 'transparent',
-              borderRadius: 4,
-              padding: 3,
-              transition: 'background 0.12s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-          >
-            🎭
+            <LogOut size={12} strokeWidth={1.75} />
           </button>
         </div>
 

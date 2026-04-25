@@ -4,12 +4,19 @@ let _demoMode = false
 export function setApiDemoMode(val) { _demoMode = !!val }
 
 async function req(method, path, body) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json', 'X-Demo-Mode': String(_demoMode) },
-  }
+  const token = localStorage.getItem('continuum_auth_token')
+  const headers = { 'Content-Type': 'application/json', 'X-Demo-Mode': String(_demoMode) }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const opts = { method, headers }
   if (body !== undefined) opts.body = JSON.stringify(body)
   const res = await fetch(`${BASE}${path}`, opts)
+  if (res.status === 401) {
+    localStorage.removeItem('continuum_auth_token')
+    localStorage.removeItem('continuum_auth_role')
+    localStorage.removeItem('continuum_auth_name')
+    window.location.reload()
+    throw new Error('Session expired')
+  }
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}`)
   return res.json()
 }
