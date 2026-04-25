@@ -314,10 +314,6 @@ export default function FloorView({ onOpenAgent, onNavigate, demoMode }) {
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>radio_button_checked</span>
             Gemba Agent
           </button>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600, background: 'linear-gradient(135deg,#f97316,#ea580c)', color: 'white', border: 'none', cursor: 'pointer' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>play_arrow</span>
-            Start Walk
-          </button>
         </div>
       </div>
 
