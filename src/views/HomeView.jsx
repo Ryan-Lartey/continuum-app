@@ -18,6 +18,14 @@ const STAGE_COLORS = {
   Identify: '#E8820C', Define: '#3B7FDE', Measure: '#7C3AED',
   Analyse: '#DC2626', Improve: '#16A34A', Control: '#059669', Closed: '#6B7280',
 }
+const STAGE_ICONS = {
+  Identify: '🔍', Define: '📋', Measure: '📊', Analyse: '🔬',
+  Improve: '⚡', Control: '✅', Closed: '✓',
+}
+const WASTE_COLORS = {
+  Transport: '#3B7FDE', Inventory: '#7C3AED', Motion: '#16A34A', Waiting: '#E8820C',
+  Overproduction: '#DC2626', Overprocessing: '#0891B2', Defects: '#B91C1C', Skills: '#059669',
+}
 const DMAIC = ['Identify', 'Define', 'Measure', 'Analyse', 'Improve', 'Control']
 const TODAY = new Date().toISOString().split('T')[0]
 let _briefGenDate = null
@@ -80,30 +88,23 @@ function BriefMarkdown({ text }) {
   return <div style={{ fontSize: 12, lineHeight: 1.65, color: 'var(--text-2)' }}>{elements}</div>
 }
 
-function ProgressRing({ pct, color, size = 44 }) {
-  const r = 15, circ = 2 * Math.PI * r
-  const dash = Math.min(Math.max(pct, 0), 100) / 100 * circ
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" style={{ flexShrink: 0 }}>
-      <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3.5" />
-      <circle cx="20" cy="20" r={r} fill="none" stroke={color} strokeWidth="3.5"
-        strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
-        transform="rotate(-90 20 20)" />
-      <text x="20" y="24" textAnchor="middle" fontSize="8" fontWeight="700" fill={color}>{Math.round(pct)}%</text>
-    </svg>
-  )
-}
-
 const HEADCOUNT_KEY = `continuum_headcount_${TODAY}`
-
 function loadHeadcount() {
   try { return JSON.parse(localStorage.getItem(HEADCOUNT_KEY)) || { inbound: '', outbound: '', pick: '' } }
   catch { return { inbound: '', outbound: '', pick: '' } }
 }
-
 function headcountString(hc) {
   if (!hc.inbound && !hc.outbound && !hc.pick) return ''
   return `Current headcount: Inbound: ${hc.inbound || '—'}, Outbound: ${hc.outbound || '—'}, Pick: ${hc.pick || '—'}.`
+}
+
+// ─── Glass card shared style ──────────────────────────────────────────────────
+const glass = {
+  background: 'rgba(17,17,20,0.6)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255,255,255,0.06)',
+  borderRadius: 14,
 }
 
 export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, demoMode }) {
@@ -116,7 +117,7 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
   const [todayObs, setTodayObs]             = useState(0)
   const [briefStreaming, setBriefStreaming]  = useState(false)
   const [briefStreamText, setBriefStreamText] = useState('')
-  const [tier2Today, setTier2Today]         = useState(null) // kept for compat
+  const [tier2Today, setTier2Today]         = useState(null)
   const [priorities, setPriorities]         = useState([])
   const [priorityIdx, setPriorityIdx]       = useState(0)
   const [priorityLoading, setPriorityLoading] = useState(false)
@@ -128,24 +129,20 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
   const [allObs, setAllObs]                 = useState([])
   const [taskTab, setTaskTab]               = useState('upcoming')
   const [tier2Prepped, setTier2Prepped]     = useState(false)
+  const [recentIdeas, setRecentIdeas]       = useState([])
+  const [kpiTargets, setKpiTargets]         = useState(DEFAULT_TARGETS)
+  const [headcount, setHeadcount]           = useState(loadHeadcount)
+  const [headcountSaved, setHeadcountSaved] = useState(false)
+  const [nudges, setNudges]                 = useState([])
+  const [sections, setSections]             = useState([])
   const autoGenFired    = useRef(false)
   const prioritiesFired = useRef(false)
-
-  const [recentIdeas, setRecentIdeas] = useState([])
-  const [kpiTargets, setKpiTargets]   = useState(DEFAULT_TARGETS)
-
-  // ─── Headcount ───
-  const [headcount, setHeadcount] = useState(loadHeadcount)
-  const [headcountSaved, setHeadcountSaved] = useState(false)
 
   function saveHeadcount() {
     localStorage.setItem(HEADCOUNT_KEY, JSON.stringify(headcount))
     setHeadcountSaved(true)
     setTimeout(() => setHeadcountSaved(false), 2000)
   }
-
-  // ─── Nudges ───
-  const [nudges, setNudges] = useState([])
 
   useEffect(() => {
     api.getSite().then(s => { if (s.kpi_targets) setKpiTargets(s.kpi_targets) }).catch(() => {})
@@ -159,7 +156,8 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
       api.getTier2Today().catch(() => null),
       api.getPortfolios().catch(() => []),
       api.getIdeas({ limit: 5 }).catch(() => []),
-    ]).then(([kpis, allK, ps, latestBrief, pats, obs, t2, pfs, ideas]) => {
+      api.getSections().catch(() => []),
+    ]).then(([kpis, allK, ps, latestBrief, pats, obs, t2, pfs, ideas, secs]) => {
       setLatestKpis(kpis)
       setAllKpis(allK)
       setProjects(ps.filter(p => p.stage !== 'Closed'))
@@ -169,6 +167,9 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
       if (t2) setTier2Today(t2)
       setPortfolios(pfs)
       setRecentIdeas(Array.isArray(ideas) ? ideas : [])
+      setSections(Array.isArray(secs) ? secs : [])
+      setAllObs(obs)
+
       const briefIsError = (latestBrief?.content || '').includes('No API key configured')
       const briefExists = latestBrief && (latestBrief.created_at || '').startsWith(TODAY) && !briefIsError
       if (briefIsError) setBrief(null)
@@ -182,28 +183,19 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
         prioritiesFired.current = true
         generatePriorities(kpis, ps, pats, obs)
       }
-      // Store obs for activity feed
-      setAllObs(obs)
 
-      // ─── Nudges rules engine ───
       const dismissed = new Set(JSON.parse(sessionStorage.getItem('continuum_dismissed_nudges') || '[]'))
       const computed = []
       const now = new Date()
-
-      // Rule 1: Stalled project (>14 days, not finished)
       ps.filter(p => p.stage !== 'Closed' && p.stage !== 'finished').forEach(p => {
         const updatedAt = p.updated_at ? new Date(p.updated_at) : null
         if (!updatedAt) return
         const days = Math.floor((now - updatedAt) / 86400000)
         if (days > 14) {
           const id = `stalled-project-${p.id}`
-          if (!dismissed.has(id)) {
-            computed.push({ id, icon: '⚠', message: `${p.title} hasn't moved in ${days} days. Want to update it?`, action: 'Open Projects', onAction: () => onNavigate('projects', p), urgency: days })
-          }
+          if (!dismissed.has(id)) computed.push({ id, icon: '⚠', message: `${p.title} hasn't moved in ${days} days. Want to update it?`, action: 'Open Projects', onAction: () => onNavigate('projects', p), urgency: days })
         }
       })
-
-      // Rule 2: Repeated waste pattern in 14 days
       const cutoff14 = new Date(now - 14 * 86400000).toISOString().split('T')[0]
       const recentObs = obs.filter(o => o.date >= cutoff14)
       const wasteCounts = {}
@@ -211,31 +203,21 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
       Object.entries(wasteCounts).forEach(([type, count]) => {
         if (count >= 3) {
           const id = `waste-pattern-${type}`
-          if (!dismissed.has(id)) {
-            computed.push({ id, icon: '📊', message: `You've logged ${count} ${type} observations recently. Want to raise an idea?`, action: 'Go to Floor', onAction: () => onNavigate('floor'), urgency: count * 2 })
-          }
+          if (!dismissed.has(id)) computed.push({ id, icon: '📊', message: `You've logged ${count} ${type} observations recently. Want to raise an idea?`, action: 'Go to Floor', onAction: () => onNavigate('floor'), urgency: count * 2 })
         }
       })
-
-      // Rule 3: KPIs not logged in >2 days
       const latestKpiEntry = allK.length > 0 ? allK[allK.length - 1] : null
       if (latestKpiEntry) {
         const kpiDate = latestKpiEntry.date || (latestKpiEntry.created_at || '').split('T')[0]
         const kpiDays = kpiDate ? Math.floor((now - new Date(kpiDate)) / 86400000) : null
         if (kpiDays !== null && kpiDays > 2) {
           const id = 'kpis-not-logged'
-          if (!dismissed.has(id)) {
-            computed.push({ id, icon: '📉', message: `KPIs haven't been logged in ${kpiDays} day${kpiDays !== 1 ? 's' : ''}. Log now?`, action: 'Log KPIs', onAction: () => onNavigate('data'), urgency: kpiDays * 3 })
-          }
+          if (!dismissed.has(id)) computed.push({ id, icon: '📉', message: `KPIs haven't been logged in ${kpiDays} day${kpiDays !== 1 ? 's' : ''}. Log now?`, action: 'Log KPIs', onAction: () => onNavigate('data'), urgency: kpiDays * 3 })
         }
       } else {
         const id = 'kpis-not-logged'
-        if (!dismissed.has(id)) {
-          computed.push({ id, icon: '📉', message: `No KPIs logged yet. Log now?`, action: 'Log KPIs', onAction: () => onNavigate('data'), urgency: 10 })
-        }
+        if (!dismissed.has(id)) computed.push({ id, icon: '📉', message: `No KPIs logged yet. Log now?`, action: 'Log KPIs', onAction: () => onNavigate('data'), urgency: 10 })
       }
-
-      // Rule 4: Idea stuck in definition >14 days
       if (Array.isArray(ideas)) {
         ideas.forEach(idea => {
           if ((idea.stage || '').toLowerCase() === 'definition') {
@@ -244,14 +226,11 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
             const days = Math.floor((now - updatedAt) / 86400000)
             if (days > 14) {
               const id = `idea-stuck-${idea.id}`
-              if (!dismissed.has(id)) {
-                computed.push({ id, icon: '💡', message: `'${idea.title}' has been in definition for ${days} days. Review it?`, action: 'View Portfolio', onAction: () => onNavigate('portfolio'), urgency: days })
-              }
+              if (!dismissed.has(id)) computed.push({ id, icon: '💡', message: `'${idea.title}' has been in definition for ${days} days. Review it?`, action: 'View Portfolio', onAction: () => onNavigate('portfolio'), urgency: days })
             }
           }
         })
       }
-
       computed.sort((a, b) => b.urgency - a.urgency)
       setNudges(computed.slice(0, 3))
     })
@@ -302,35 +281,14 @@ export default function HomeView({ onOpenAgent, onNavigate, onOpenPortfolio, dem
         : p.project_type || 'Unknown'
       return `${p.title} [${p.stage}, ${typeLabel}] — ${done}/${tot} actions done${next ? ', next: ' + next.text : ''}`
     }).join('\n')
+    const METRICS = buildMetrics(kpiTargets)
     const kpiLines = Object.entries(kpis).map(([k, v]) => {
       const m    = METRICS.find(x => x.id === k)
       const diff = v?.value !== undefined && m ? ((v.value - m.target) / m.target * 100).toFixed(1) : null
       return `${k.toUpperCase()}: ${v?.value ?? 'not logged'} (target ${m?.target ?? '—'}${diff !== null ? `, ${diff > 0 ? '+' : ''}${diff}%` : ''})`
     }).join('\n')
-
     const hcStr = headcountString(loadHeadcount())
-    const prompt = `You are Ryan's CI coach at an Amazon FC (ID Logistics). Generate his prioritised action queue for right now.
-
-Data:
-KPIs:
-${kpiLines || 'No KPIs logged today'}
-
-Projects:
-${projectData || 'None'}
-
-Floor observations today: ${todayCount}
-Overdue actions: ${overdue.length > 0 ? overdue.join('; ') : 'none'}
-Waste patterns (48h): ${pats.map(p => p.waste_type + ' ×' + p.count).join(', ') || 'none'}
-Current time: ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}${hcStr ? '\n' + hcStr : ''}
-
-Output a JSON array of 3-5 priorities. Each object must have exactly these fields:
-- "action": what to do right now — specific, starts with a verb, uses real numbers from the data
-- "why": one sentence explaining why this is the priority — be concrete
-- "type": one of "task" | "floor" | "data" | "meeting" | "escalation"
-
-Order by urgency and impact. Only include things that genuinely need doing today.
-Output ONLY the JSON array. No markdown. No explanation.`
-
+    const prompt = `You are Ryan's CI coach at an Amazon FC (ID Logistics). Generate his prioritised action queue for right now.\n\nData:\nKPIs:\n${kpiLines || 'No KPIs logged today'}\n\nProjects:\n${projectData || 'None'}\n\nFloor observations today: ${todayCount}\nOverdue actions: ${overdue.length > 0 ? overdue.join('; ') : 'none'}\nWaste patterns (48h): ${pats.map(p => p.waste_type + ' ×' + p.count).join(', ') || 'none'}\nCurrent time: ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}${hcStr ? '\n' + hcStr : ''}\n\nOutput a JSON array of 3-5 priorities. Each object must have exactly these fields:\n- "action": what to do right now — specific, starts with a verb, uses real numbers from the data\n- "why": one sentence explaining why this is the priority — be concrete\n- "type": one of "task" | "floor" | "data" | "meeting" | "escalation"\n\nOrder by urgency and impact. Only include things that genuinely need doing today.\nOutput ONLY the JSON array. No markdown. No explanation.`
     let acc = ''
     streamAgent('chief-of-staff', [{ role: 'user', content: prompt }], null,
       chunk => { acc += chunk },
@@ -349,25 +307,12 @@ Output ONLY the JSON array. No markdown. No explanation.`
     setArticulateLoading(true)
     setArticulateText('')
     setShowArticulate(true)
+    const METRICS = buildMetrics(kpiTargets)
     const kpiLines = Object.entries(latestKpis).map(([k, v]) => {
       const m = METRICS.find(x => x.id === k)
       return `${k.toUpperCase()}: ${v?.value ?? '—'} vs target ${m?.target ?? '—'}`
     }).join(', ')
-    const prompt = `Ryan needs to raise this with his ops manager or in his Tier 2 meeting:
-
-"${priority.action}"
-Why it matters: ${priority.why}
-KPI context: ${kpiLines || 'no KPIs logged'}
-
-Write his talking points in exactly this format — no intro, no outro:
-
-**Situation:** [1 sentence — what's happening, with the number if available]
-**Impact:** [1 sentence — what this means for the operation]
-**What I'm doing:** [1 sentence — his plan or what he's already done]
-**Ask:** [1 sentence — what he needs from management, or "No ask — informing you" if none]
-
-First person. Confident. Meeting-ready. No waffle.`
-
+    const prompt = `Ryan needs to raise this with his ops manager or in his Tier 2 meeting:\n\n"${priority.action}"\nWhy it matters: ${priority.why}\nKPI context: ${kpiLines || 'no KPIs logged'}\n\nWrite his talking points in exactly this format — no intro, no outro:\n\n**Situation:** [1 sentence — what's happening, with the number if available]\n**Impact:** [1 sentence — what this means for the operation]\n**What I'm doing:** [1 sentence — his plan or what he's already done]\n**Ask:** [1 sentence — what he needs from management, or "No ask — informing you" if none]\n\nFirst person. Confident. Meeting-ready. No waffle.`
     let acc = ''
     streamAgent('chief-of-staff', [{ role: 'user', content: prompt }], null,
       chunk => { acc += chunk; setArticulateText(acc) },
@@ -376,44 +321,20 @@ First person. Confident. Meeting-ready. No waffle.`
     )
   }
 
-  // ─── Computed ───
+  // ─── Computed ────────────────────────────────────────────────────────────────
   const METRICS = buildMetrics(kpiTargets)
   const todayKpiLogged = Object.values(latestKpis).some(k => k?.date === TODAY)
   const briefToday     = brief && (brief.created_at || '').startsWith(TODAY)
   const overdueActions = projects.flatMap(p =>
     (p.actions || []).filter(a => !a.done && a.due && a.due < TODAY).map(a => ({ ...a, project: p.title }))
   )
-
-  const allTasks       = projects.flatMap(p => (p.actions || []).map(a => ({ ...a, projectTitle: p.title })))
-  const upcomingTasks  = allTasks.filter(a => !a.done && a.status !== 'Complete' && (!a.due || a.due >= TODAY))
-  const overdueTasks   = allTasks.filter(a => !a.done && a.status !== 'Complete' && a.due && a.due < TODAY)
-  const completedTasks = allTasks.filter(a => a.done || a.status === 'Complete')
-  const activeTasks    = taskTab === 'upcoming' ? upcomingTasks : taskTab === 'overdue' ? overdueTasks : completedTasks
-
-  const kpiItems = allKpis.slice(-12).map(k => ({
-    label: `${METRICS.find(m => m.id === k.metric_id)?.label || k.metric_id?.toUpperCase()} logged: ${k.value}`,
-    date: k.date,
-    sortKey: k.created_at || k.date,
-    icon: '▲',
-    color: '#60a5fa',
-  }))
-  const todayObsItems = allObs.filter(o => o.date === TODAY).map(o => ({
-    label: `Floor obs (${o.area}): ${o.text.slice(0,50)}${o.text.length>50?'…':''}`,
-    date: o.date,
-    sortKey: o.created_at || o.date,
-    icon: '◎',
-    color: '#4ade80',
-  }))
-  const ideaItems = recentIdeas.map(idea => ({
-    label: `Idea created: ${idea.title}`,
-    date: (idea.created_at || '').slice(0,10),
-    sortKey: idea.created_at || '',
-    icon: '◈',
-    color: '#fb923c',
-  }))
-  const recentActivity = [...kpiItems, ...todayObsItems, ...ideaItems]
-    .sort((a,b) => (b.sortKey||'').localeCompare(a.sortKey||''))
-    .slice(0,10)
+  const allTasks      = projects.flatMap(p => (p.actions || []).map(a => ({ ...a, projectTitle: p.title })))
+  const upcomingTasks = allTasks.filter(a => !a.done && a.status !== 'Complete' && (!a.due || a.due >= TODAY))
+  const overdueTasks  = allTasks.filter(a => !a.done && a.status !== 'Complete' && a.due && a.due < TODAY)
+  const displayBriefContent = briefStreaming ? briefStreamText : brief?.content
+  const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+  const hour = new Date().getHours()
+  const shiftLabel = hour >= 6 && hour < 18 ? 'Day Shift' : 'Night Shift'
 
   function openTier2() {
     const kpiLines = Object.entries(latestKpis).map(([k, v]) => {
@@ -429,224 +350,257 @@ First person. Confident. Meeting-ready. No waffle.`
   }
 
   const routinePills = [
-    { label: 'Brief',    done: briefToday || briefStreaming, onClick: () => autoGenerateBrief(latestKpis, projects, patterns) },
-    { label: 'KPIs',     done: todayKpiLogged,              onClick: () => onNavigate('data') },
-    { label: 'Floor',    done: todayObs > 0,                onClick: () => onNavigate('floor') },
-    { label: 'Tier 2',   done: tier2Prepped,                onClick: openTier2 },
+    { label: 'Brief',  done: briefToday || briefStreaming, onClick: () => autoGenerateBrief(latestKpis, projects, patterns) },
+    { label: 'KPIs',   done: todayKpiLogged,               onClick: () => onNavigate('data') },
+    { label: 'Floor',  done: todayObs > 0,                 onClick: () => onNavigate('floor') },
+    { label: 'Tier 2', done: tier2Prepped,                 onClick: openTier2 },
   ]
   const routineDone = routinePills.filter(p => p.done).length
   const allGreen    = routineDone === 4
 
-  const displayBriefContent = briefStreaming ? briefStreamText : brief?.content
-  const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const todayObsList = allObs.filter(o => o.date === TODAY)
+
+  // ─── Helpers ──────────────────────────────────────────────────────────────────
+  function sectionRag(s) {
+    if (!s || s.score_status === 'no_data' || s.score === null) return { color: '#94A3B8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)', label: 'No Data' }
+    if (s.score >= 80) return { color: '#22C55E', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)', label: 'Healthy' }
+    if (s.score >= 60) return { color: '#F59E0B', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)', label: 'At Risk' }
+    return { color: '#EF4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)', label: 'Critical' }
+  }
 
   return (
-    <div className="space-y-5 max-w-[1400px]">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1400 }}>
 
-      {/* Header */}
-      <div className="flex items-start justify-between">
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingBottom: 4 }}>
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--text-1)' }}>{getGreeting()}, Ryan</h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>{dateStr}</p>
+          <h1 style={{ fontFamily: 'Geist, Inter, sans-serif', fontSize: 30, fontWeight: 800, letterSpacing: '-0.04em', color: 'var(--text-1)', margin: 0 }}>
+            {getGreeting()}, Ryan
+          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{dateStr}</span>
+            <span style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.12)', display: 'inline-block' }} />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: '#4ade80', background: 'rgba(74,222,128,0.1)', padding: '3px 10px', borderRadius: 999, border: '1px solid rgba(74,222,128,0.2)', letterSpacing: '0.02em' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.7)' }} />
+              Live · {shiftLabel}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {signals.length > 0 && (
-            <button onClick={() => onNavigate('data')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border"
-              style={{ background: 'rgba(220,38,38,0.1)', borderColor: 'rgba(220,38,38,0.25)', color: '#f87171' }}>
-              <span className="signal-dot"><span className="w-2 h-2 rounded-full bg-red-500 relative z-10 block" /></span>
+            <button onClick={() => onNavigate('data')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', cursor: 'pointer' }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f87171', boxShadow: '0 0 6px rgba(239,68,68,0.7)' }} />
               {signals.length} SPC signal{signals.length > 1 ? 's' : ''}
             </button>
           )}
           {overdueActions.length > 0 && (
-            <button onClick={() => onNavigate('projects')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border"
-              style={{ background: 'rgba(220,38,38,0.08)', borderColor: 'rgba(220,38,38,0.2)', color: '#f87171' }}>
-              ⚠ {overdueActions.length} overdue action{overdueActions.length > 1 ? 's' : ''}
+            <button onClick={() => onNavigate('projects')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', cursor: 'pointer' }}>
+              ⚠ {overdueActions.length} overdue
             </button>
           )}
           {patterns.map(p => (
-            <div key={p.waste_type} className="px-4 py-2 rounded-xl text-sm font-medium border"
-              style={{ background: 'rgba(232,130,12,0.1)', borderColor: 'rgba(232,130,12,0.25)', color: '#fb923c' }}>
-              ⚠ {p.waste_type} ×{p.count} this week
+            <div key={p.waste_type} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600, background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', color: '#fb923c' }}>
+              ⚠ {p.waste_type} ×{p.count}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Routine pills */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* ── Routine pills ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {routinePills.map(p => (
-          <button key={p.label}
-            onClick={p.onClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
-            style={{
-              background: p.done ? 'rgba(74,222,128,0.1)' : 'var(--bg-input)',
-              color:      p.done ? '#4ade80' : 'var(--text-3)',
-              border:     `1px solid ${p.done ? 'rgba(74,222,128,0.25)' : 'var(--border)'}`,
-              cursor: 'pointer',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = p.done ? 'rgba(74,222,128,0.18)' : 'var(--bg-card)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = p.done ? 'rgba(74,222,128,0.1)' : 'var(--bg-input)' }}>
-            <span>{p.done ? '●' : '○'}</span>
-            <span>{p.label}</span>
+          <button key={p.label} onClick={p.onClick} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s', background: p.done ? 'rgba(74,222,128,0.1)' : 'var(--bg-input)', color: p.done ? '#4ade80' : 'var(--text-3)', border: `1px solid ${p.done ? 'rgba(74,222,128,0.25)' : 'var(--border)'}` }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: p.done ? '#4ade80' : 'rgba(255,255,255,0.15)', display: 'inline-block', transition: 'background 0.15s' }} />
+            {p.label}
           </button>
         ))}
-        <span className="text-xs font-semibold ml-1" style={{ color: allGreen ? '#4ade80' : 'var(--text-3)' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 4, color: allGreen ? '#4ade80' : 'var(--text-3)' }}>
           {allGreen ? '✓ All done' : `${routineDone}/4`}
         </span>
       </div>
 
-      {/* ─── Nudge Cards ─── */}
+      {/* ── Nudges ── */}
       {nudges.length > 0 && (
-        <div className="space-y-2" style={{ position: 'relative' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <PresentationHotspot id="home-nudges" demoMode={demoMode} />
           {nudges.map(nudge => (
-            <div key={nudge.id} className="flex items-center gap-3 px-4 py-3 rounded-xl"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderLeft: '3px solid #fb923c' }}>
-              <span className="text-base flex-shrink-0">{nudge.icon}</span>
-              <p className="flex-1 text-sm" style={{ color: 'var(--text-2)' }}>{nudge.message}</p>
-              <button onClick={nudge.onAction}
-                className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg"
-                style={{ background: 'rgba(251,146,60,0.12)', color: '#fb923c' }}>
-                {nudge.action}
-              </button>
+            <div key={nudge.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', ...glass, borderLeft: '3px solid #fb923c', borderRadius: 12 }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>{nudge.icon}</span>
+              <p style={{ flex: 1, fontSize: 13, color: 'var(--text-2)', margin: 0 }}>{nudge.message}</p>
+              <button onClick={nudge.onAction} style={{ flexShrink: 0, fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 8, background: 'rgba(251,146,60,0.12)', color: '#fb923c', border: '1px solid rgba(251,146,60,0.2)', cursor: 'pointer' }}>{nudge.action}</button>
               <button onClick={() => {
-                const dismissed = new Set(JSON.parse(sessionStorage.getItem('continuum_dismissed_nudges') || '[]'))
-                dismissed.add(nudge.id)
-                sessionStorage.setItem('continuum_dismissed_nudges', JSON.stringify([...dismissed]))
+                const d = new Set(JSON.parse(sessionStorage.getItem('continuum_dismissed_nudges') || '[]'))
+                d.add(nudge.id)
+                sessionStorage.setItem('continuum_dismissed_nudges', JSON.stringify([...d]))
                 setNudges(prev => prev.filter(n => n.id !== nudge.id))
-              }} className="flex-shrink-0 text-xs px-1.5 py-1 rounded-lg transition-opacity hover:opacity-70"
-                style={{ color: 'var(--text-3)' }}>✕</button>
+              }} style={{ fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: 6 }}>✕</button>
             </div>
           ))}
         </div>
       )}
 
-      {/* ─── Headcount Today ─── */}
-      <div className="card p-4" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Headcount Today</span>
-          <button onClick={saveHeadcount}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-opacity"
-            style={{ background: headcountSaved ? 'rgba(74,222,128,0.12)' : 'var(--bg-input)', color: headcountSaved ? '#4ade80' : 'var(--text-3)' }}>
-            {headcountSaved ? '✓ Saved' : 'Save'}
-          </button>
+      {/* ── Section Health row ── */}
+      {sections.length > 0 && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-3)' }}>Warehouse Health</span>
+            <button onClick={() => onNavigate('data')} style={{ fontSize: 12, color: '#f97316', background: 'none', border: 'none', cursor: 'pointer' }}>View Details →</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${sections.length}, 1fr)`, gap: 12 }}>
+            {sections.map(s => {
+              const rag = sectionRag(s)
+              return (
+                <button key={s.id} onClick={() => onNavigate('data')} style={{ ...glass, borderTop: `2px solid ${rag.color}`, borderRadius: 12, padding: '16px 14px', cursor: 'pointer', textAlign: 'left', transition: 'all 220ms cubic-bezier(0.34,1.56,0.64,1)', background: 'rgba(17,17,20,0.6)' }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 32px ${rag.color}20` }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-3)' }}>{s.label}</span>
+                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '2px 7px', borderRadius: 5, background: rag.bg, color: rag.color, border: `1px solid ${rag.border}` }}>{rag.label}</span>
+                  </div>
+                  <div style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.04em', fontFamily: 'Geist, Inter, sans-serif', lineHeight: 1, marginBottom: 6, background: `linear-gradient(135deg, #ffffff 20%, ${rag.color} 100%)`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                    {s.score !== null ? `${Math.round(s.score)}%` : '—'}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                    {s.last_shift ? s.last_shift.date : 'No shift data'}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {[
-            { key: 'inbound', label: 'Inbound' },
-            { key: 'outbound', label: 'Outbound' },
-            { key: 'pick', label: 'Pick' },
-          ].map(({ key, label }) => (
-            <div key={key} className="flex-1">
-              <label className="block text-[10px] font-semibold mb-1" style={{ color: 'var(--text-3)' }}>{label}</label>
-              <input
-                type="number"
-                min="0"
-                value={headcount[key]}
-                onChange={e => setHeadcount(prev => ({ ...prev, [key]: e.target.value }))}
-                className="w-full px-3 py-2 rounded-xl text-sm text-center font-semibold"
-                style={{ background: 'var(--bg-input)', color: 'var(--text-1)', border: '1px solid var(--border)', outline: 'none' }}
-                placeholder="—"
-              />
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
-      {/* ─── Overview 2×2 ─── */}
-      <div className="grid grid-cols-2 gap-5">
+      {/* ── Projects + Observations 2-col ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
 
-        {/* Recent Projects */}
-        <div className="card p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Recent Projects</h2>
-            <button onClick={() => onNavigate('projects')}
-              className="text-[10px] font-bold uppercase tracking-widest hover:opacity-70 transition-opacity"
-              style={{ color: 'var(--text-3)' }}>View All →</button>
+        {/* Active Projects */}
+        <div style={{ ...glass, padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <h3 style={{ fontFamily: 'Geist, Inter, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text-1)', margin: 0, letterSpacing: '-0.02em' }}>Active Projects</h3>
+            <button onClick={() => onNavigate('projects')} style={{ fontSize: 12, color: '#f97316', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>View All →</button>
           </div>
           {projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <div className="text-3xl mb-1" style={{ color: 'var(--text-3)', opacity: 0.5 }}>◆</div>
-              <p className="text-sm" style={{ color: 'var(--text-3)' }}>No active projects</p>
-              <button onClick={() => onNavigate('projects')} className="text-xs font-semibold mt-1 px-3 py-1.5 rounded-lg" style={{ background: 'linear-gradient(135deg, #f97316, #ea6c0a)', color: '#fff', boxShadow: '0 2px 12px rgba(249,115,22,0.2)' }}>Start one →</button>
+            <div style={{ textAlign: 'center', padding: '28px 0' }}>
+              <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.3 }}>◆</div>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '0 0 12px' }}>No active projects</p>
+              <button onClick={() => onNavigate('projects')} style={{ padding: '6px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #f97316, #ea6c0a)', color: '#fff', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 4px 16px rgba(249,115,22,0.3)' }}>Start one →</button>
             </div>
           ) : (
-            <div className="space-y-1.5">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {projects.slice(0, 5).map(p => {
-                const color    = STAGE_COLORS[p.stage] || '#6B7280'
-                const done     = (p.actions || []).filter(a => a.done || a.status === 'Complete').length
-                const total    = (p.actions || []).length
-                const stageIdx = DMAIC.indexOf(p.stage)
-                const pct      = total > 0 ? done / total * 100 : stageIdx >= 0 ? stageIdx / DMAIC.length * 100 : 0
+                const color = STAGE_COLORS[p.stage] || '#6B7280'
+                const icon  = STAGE_ICONS[p.stage] || '◆'
+                const done  = (p.actions || []).filter(a => a.done || a.status === 'Complete').length
+                const total = (p.actions || []).length
                 return (
                   <button key={p.id} onClick={() => onNavigate('projects', p)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:opacity-80 transition-all transition-colors"
-                    style={{ background: 'var(--bg-input)' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-input)' }}>
-                    <ProgressRing pct={pct} color={color} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-1)' }}>{p.title}</div>
-                      <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
-                        <span className="font-semibold" style={{ color }}>{p.stage}</span>
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s', width: '100%' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)' }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 16 }}>
+                      {icon}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                        <span style={{ color }}>{p.stage}</span>
                         {total > 0 && <span> · {done}/{total} tasks</span>}
                       </div>
                     </div>
-                    <span className="text-base flex-shrink-0" style={{ color: 'var(--text-3)' }}>›</span>
+                    <span style={{ flexShrink: 0, padding: '3px 9px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: `${color}15`, color, border: `1px solid ${color}30`, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{p.stage}</span>
                   </button>
                 )
               })}
             </div>
           )}
+        </div>
+
+        {/* Today's Observations */}
+        <div style={{ ...glass, padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <h3 style={{ fontFamily: 'Geist, Inter, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text-1)', margin: 0, letterSpacing: '-0.02em' }}>Today's Observations</h3>
+            <button onClick={() => onNavigate('floor')} style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.25)', color: '#f97316', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 300, lineHeight: 1 }}>+</button>
+          </div>
+          {todayObsList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '28px 0' }}>
+              <div style={{ fontSize: 28, marginBottom: 8, opacity: 0.3 }}>◎</div>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', margin: '0 0 12px' }}>No observations today</p>
+              <button onClick={() => onNavigate('floor')} style={{ padding: '6px 16px', borderRadius: 8, background: 'rgba(249,115,22,0.1)', color: '#f97316', fontSize: 12, fontWeight: 700, border: '1px solid rgba(249,115,22,0.25)', cursor: 'pointer' }}>Start floor walk →</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {todayObsList.slice(0, 3).map((o, i) => {
+                const wc = WASTE_COLORS[o.waste_type] || '#8b8b97'
+                return (
+                  <div key={i} style={{ padding: '12px 14px 12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.04)', background: `linear-gradient(to right, ${wc}08, transparent)`, borderLeft: `3px solid ${wc}`, position: 'relative' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 7 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 8px', borderRadius: 5, background: `${wc}18`, color: wc, border: `1px solid ${wc}30` }}>{o.waste_type}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                        {o.created_at ? new Date(o.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 13, color: 'var(--text-1)', margin: '0 0 8px', lineHeight: 1.5 }}>{o.text.slice(0, 90)}{o.text.length > 90 ? '…' : ''}</p>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <span style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-3)', border: '1px solid var(--border)', padding: '2px 7px', borderRadius: 4 }}>{o.area}</span>
+                    </div>
+                  </div>
+                )
+              })}
+              {todayObsList.length > 3 && (
+                <button onClick={() => onNavigate('floor')} style={{ fontSize: 12, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', padding: '4px 0' }}>+{todayObsList.length - 3} more →</button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Headcount + Tasks row ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 20 }}>
+
+        {/* Headcount */}
+        <div style={{ ...glass, padding: 20, minWidth: 260 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-3)' }}>Headcount Today</span>
+            <button onClick={saveHeadcount} style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 7, background: headcountSaved ? 'rgba(74,222,128,0.12)' : 'var(--bg-input)', color: headcountSaved ? '#4ade80' : 'var(--text-3)', border: 'none', cursor: 'pointer' }}>
+              {headcountSaved ? '✓ Saved' : 'Save'}
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[{ key: 'inbound', label: 'Inbound' }, { key: 'outbound', label: 'Outbound' }, { key: 'pick', label: 'Pick' }].map(({ key, label }) => (
+              <div key={key} style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-3)', marginBottom: 6 }}>{label}</label>
+                <input type="number" min="0" value={headcount[key]}
+                  onChange={e => setHeadcount(prev => ({ ...prev, [key]: e.target.value }))}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: 9, background: 'var(--bg-input)', color: 'var(--text-1)', border: '1px solid var(--border)', outline: 'none', textAlign: 'center', fontSize: 14, fontWeight: 700, boxSizing: 'border-box' }}
+                  placeholder="—" />
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Tasks */}
-        <div className="card p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <h2 className="font-semibold text-sm mb-3" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Tasks</h2>
-          <div className="flex gap-1 mb-4 p-1 rounded-xl" style={{ background: 'var(--bg-input)' }}>
-            {[
-              { id: 'upcoming',  label: 'Upcoming',  count: upcomingTasks.length },
-              { id: 'overdue',   label: 'Overdue',   count: overdueTasks.length },
-              { id: 'completed', label: 'Completed', count: completedTasks.length },
-            ].map(tab => (
-              <button key={tab.id} onClick={() => setTaskTab(tab.id)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                style={{ background: taskTab === tab.id ? 'var(--bg-card)' : 'transparent', color: taskTab === tab.id ? 'var(--text-1)' : 'var(--text-3)' }}>
-                {tab.label}
-                {tab.count > 0 && (
-                  <span className="px-1.5 rounded-full text-[10px] font-bold"
-                    style={{
-                      background: taskTab === tab.id ? (tab.id === 'overdue' ? 'rgba(220,38,38,0.2)' : tab.id === 'completed' ? 'rgba(74,222,128,0.2)' : 'rgba(59,127,222,0.2)') : 'rgba(255,255,255,0.06)',
-                      color: taskTab === tab.id ? (tab.id === 'overdue' ? '#f87171' : tab.id === 'completed' ? '#4ade80' : '#60a5fa') : 'var(--text-3)',
-                    }}>{tab.count}</span>
-                )}
-              </button>
-            ))}
-          </div>
-          {activeTasks.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <div className="text-3xl mb-1" style={{ color: 'var(--text-3)', opacity: 0.5 }}>○</div>
-              <p className="text-sm" style={{ color: 'var(--text-3)' }}>No {taskTab} tasks</p>
+        <div style={{ ...glass, padding: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <h3 style={{ fontFamily: 'Geist, Inter, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text-1)', margin: 0, letterSpacing: '-0.02em' }}>Tasks</h3>
+            <div style={{ display: 'flex', gap: 4, padding: '4px', background: 'var(--bg-input)', borderRadius: 9 }}>
+              {[{ id: 'upcoming', label: 'Upcoming', count: upcomingTasks.length }, { id: 'overdue', label: 'Overdue', count: overdueTasks.length }].map(tab => (
+                <button key={tab.id} onClick={() => setTaskTab(tab.id)} style={{ padding: '4px 12px', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', transition: 'all 0.15s', background: taskTab === tab.id ? 'var(--bg-card)' : 'transparent', color: taskTab === tab.id ? 'var(--text-1)' : 'var(--text-3)' }}>
+                  {tab.label} {tab.count > 0 && <span style={{ marginLeft: 4, padding: '1px 5px', borderRadius: 10, fontSize: 10, fontWeight: 700, background: tab.id === 'overdue' ? 'rgba(239,68,68,0.2)' : 'rgba(59,127,222,0.2)', color: tab.id === 'overdue' ? '#f87171' : '#60a5fa' }}>{tab.count}</span>}
+                </button>
+              ))}
             </div>
+          </div>
+          {(taskTab === 'upcoming' ? upcomingTasks : overdueTasks).length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '16px 0', margin: 0 }}>No {taskTab} tasks</p>
           ) : (
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {activeTasks.slice(0, 8).map((t, i) => (
-                <div key={i} className="flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors"
-                  style={{ background: 'var(--bg-input)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-input)' }}>
-                  <span className="flex-shrink-0 text-xs mt-0.5"
-                    style={{ color: taskTab === 'completed' ? '#4ade80' : taskTab === 'overdue' ? '#f87171' : 'var(--text-3)' }}>
-                    {taskTab === 'completed' ? '✓' : '○'}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>{t.text}</div>
-                    <div className="text-[10px] mt-0.5 flex gap-2 flex-wrap" style={{ color: 'var(--text-3)' }}>
-                      <span>{t.projectTitle}</span>
-                      {t.due && <span style={{ color: taskTab === 'overdue' ? '#f87171' : 'inherit' }}>· Due {t.due}</span>}
-                      {t.owner && <span>· {t.owner}</span>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 140, overflowY: 'auto' }}>
+              {(taskTab === 'upcoming' ? upcomingTasks : overdueTasks).slice(0, 6).map((t, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px', borderRadius: 9, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <span style={{ color: taskTab === 'overdue' ? '#f87171' : 'var(--text-3)', fontSize: 12, marginTop: 1 }}>○</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.text}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>
+                      {t.projectTitle}{t.due && <span style={{ color: taskTab === 'overdue' ? '#f87171' : 'inherit' }}> · Due {t.due}</span>}
                     </div>
                   </div>
                 </div>
@@ -656,181 +610,88 @@ First person. Confident. Meeting-ready. No waffle.`
         </div>
       </div>
 
-      {/* ─── Portfolios + Activity ─── */}
-      <div className="grid grid-cols-2 gap-5">
-
-        {/* Portfolios */}
-        <div className="card p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Portfolios</h2>
-            <button onClick={() => onNavigate('portfolio')}
-              className="text-[10px] font-bold uppercase tracking-widest hover:opacity-70 transition-opacity"
-              style={{ color: 'var(--text-3)' }}>View All →</button>
-          </div>
-          {portfolios.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <div className="text-3xl mb-1" style={{ color: 'var(--text-3)', opacity: 0.5 }}>◈</div>
-              <p className="text-sm" style={{ color: 'var(--text-3)' }}>No portfolios yet</p>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              {portfolios.slice(0, 4).map(pf => {
-                const pfProjects = projects.filter(p => p.portfolio_id === pf.id)
-                return (
-                  <button key={pf.id} onClick={() => onOpenPortfolio?.(pf.id)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:opacity-80 transition-all transition-colors"
-                    style={{ background: 'var(--bg-input)' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-input)' }}>
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: 'rgba(232,130,12,0.12)' }}>
-                      <span style={{ color: '#E8820C', fontSize: 14 }}>◈</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold truncate" style={{ color: 'var(--text-1)' }}>{pf.name}</div>
-                      <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>
-                        {pfProjects.length} project{pfProjects.length !== 1 ? 's' : ''}
-                      </div>
-                    </div>
-                    <span className="text-base flex-shrink-0" style={{ color: 'var(--text-3)' }}>›</span>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Recent Activity */}
-        <div className="card p-5" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <h2 className="font-semibold text-sm mb-4" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Recent Activity</h2>
-          {recentActivity.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <div className="text-3xl mb-1" style={{ color: 'var(--text-3)', opacity: 0.5 }}>○</div>
-              <p className="text-sm" style={{ color: 'var(--text-3)' }}>No activity logged yet</p>
-            </div>
-          ) : (
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {recentActivity.map((a, i) => (
-                <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-xl transition-colors" style={{ background: 'var(--bg-input)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-input)' }}>
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: `${a.color}15` }}>
-                    <span className="text-[10px]" style={{ color: a.color }}>{a.icon}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>{a.label}</div>
-                    <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>{a.date}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ─── Priority Queue ─── */}
+      {/* ── Priority Queue ── */}
       {(() => {
-        // hotspot-priorities wrapper is inside the card below
         const current   = priorities[priorityIdx]
         const remaining = priorities.length - checkedPriorities.length
         const isMeeting = current?.type === 'meeting' || current?.type === 'escalation'
         return (
-          <div className="card p-5" style={{ position: 'relative', boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ ...glass, padding: 20, position: 'relative' }}>
             <PresentationHotspot id="home-priorities" demoMode={demoMode} />
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#E8820C' }}>What to do next</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#f97316' }}>What to do next</span>
                 {priorities.length > 0 && (
-                  <div className="flex gap-1">
+                  <div style={{ display: 'flex', gap: 4 }}>
                     {priorities.map((_, i) => (
-                      <span key={i} className="w-2 h-2 rounded-full"
-                        style={{ background: checkedPriorities.includes(i) ? '#4ade80' : i === priorityIdx ? '#E8820C' : 'var(--border)' }} />
+                      <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: checkedPriorities.includes(i) ? '#4ade80' : i === priorityIdx ? '#f97316' : 'var(--border)', display: 'inline-block' }} />
                     ))}
                   </div>
                 )}
-                {priorityLoading && <span className="text-[10px] animate-pulse" style={{ color: 'var(--text-3)' }}>working out priorities…</span>}
+                {priorityLoading && <span style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>generating…</span>}
               </div>
-              <button onClick={() => generatePriorities(latestKpis, projects, patterns, [])}
-                disabled={priorityLoading}
-                className="text-xs px-2.5 py-1 rounded-lg disabled:opacity-40"
-                style={{ background: 'var(--bg-input)', color: 'var(--text-3)' }}>
-                ↻ Refresh
-              </button>
+              <button onClick={() => generatePriorities(latestKpis, projects, patterns, [])} disabled={priorityLoading} style={{ fontSize: 11, padding: '5px 12px', borderRadius: 8, background: 'var(--bg-input)', color: 'var(--text-3)', border: 'none', cursor: 'pointer', opacity: priorityLoading ? 0.4 : 1 }}>↻ Refresh</button>
             </div>
 
             {current && !checkedPriorities.includes(priorityIdx) ? (
               <div>
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                    style={{ background: 'rgba(232,130,12,0.15)', color: '#E8820C' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
+                  <div style={{ flexShrink: 0, width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, background: 'rgba(249,115,22,0.15)', color: '#f97316' }}>
                     {priorities.filter((_, i) => !checkedPriorities.includes(i)).indexOf(current) + 1}
                   </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm mb-1" style={{ color: 'var(--text-1)' }}>{current.action}</p>
-                    {current.why && <p className="text-xs" style={{ color: 'var(--text-3)' }}>{current.why}</p>}
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-1)', margin: '0 0 5px' }}>{current.action}</p>
+                    {current.why && <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>{current.why}</p>}
                     {isMeeting && (
-                      <span className="inline-block mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                        style={{ background: 'rgba(96,165,250,0.15)', color: '#60a5fa' }}>
-                        ↗ Needs raising with manager
+                      <span style={{ display: 'inline-block', marginTop: 8, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'rgba(96,165,250,0.12)', color: '#60a5fa' }}>
+                        ↗ Raise with manager
                       </span>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <button onClick={() => {
                     setCheckedPriorities(prev => [...prev, priorityIdx])
                     setShowArticulate(false); setArticulateText('')
                     const next = priorities.findIndex((_, i) => i > priorityIdx && !checkedPriorities.includes(i))
                     if (next !== -1) setPriorityIdx(next)
-                  }} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
-                    style={{ background: 'rgba(74,222,128,0.12)', color: '#4ade80' }}>
-                    ✓ Done
-                  </button>
+                  }} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 9, fontSize: 13, fontWeight: 700, background: 'rgba(74,222,128,0.12)', color: '#4ade80', border: 'none', cursor: 'pointer' }}>✓ Done</button>
                   <button onClick={() => {
                     setShowArticulate(false); setArticulateText('')
                     const next = priorities.findIndex((_, i) => i > priorityIdx && !checkedPriorities.includes(i))
                     if (next !== -1) setPriorityIdx(next)
-                  }} className="px-4 py-2 rounded-xl text-sm font-medium"
-                    style={{ background: 'var(--bg-input)', color: 'var(--text-3)' }}>
-                    Skip →
-                  </button>
+                  }} style={{ padding: '8px 16px', borderRadius: 9, fontSize: 13, fontWeight: 600, background: 'var(--bg-input)', color: 'var(--text-3)', border: 'none', cursor: 'pointer' }}>Skip →</button>
                   {isMeeting && (
-                    <button onClick={() => { showArticulate ? setShowArticulate(false) : generateArticulate(current) }}
-                      disabled={articulateLoading}
-                      className="flex items-center gap-1.5 ml-auto px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-                      style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa' }}>
+                    <button onClick={() => { showArticulate ? setShowArticulate(false) : generateArticulate(current) }} disabled={articulateLoading} style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 9, fontSize: 13, fontWeight: 700, background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: 'none', cursor: 'pointer', opacity: articulateLoading ? 0.5 : 1 }}>
                       {articulateLoading ? '…' : showArticulate ? '↑ Hide' : '↗ How to raise this'}
                     </button>
                   )}
                 </div>
                 {showArticulate && (articulateText || articulateLoading) && (
-                  <div className="mt-4 rounded-xl p-4 border" style={{ background: 'rgba(96,165,250,0.05)', borderColor: 'rgba(96,165,250,0.2)' }}>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#60a5fa' }}>Talking points</span>
-                      <button onClick={() => navigator.clipboard?.writeText(articulateText)}
-                        className="text-[10px] px-2 py-1 rounded-lg"
-                        style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa' }}>Copy</button>
+                  <div style={{ marginTop: 14, padding: '14px 16px', borderRadius: 10, background: 'rgba(96,165,250,0.05)', border: '1px solid rgba(96,165,250,0.15)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#60a5fa' }}>Talking points</span>
+                      <button onClick={() => navigator.clipboard?.writeText(articulateText)} style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: 'none', cursor: 'pointer' }}>Copy</button>
                     </div>
                     <BriefMarkdown text={articulateText} />
-                    {articulateLoading && <span className="inline-block w-1 h-3 animate-pulse ml-0.5 align-middle" style={{ background: 'var(--text-3)' }} />}
+                    {articulateLoading && <span style={{ display: 'inline-block', width: 4, height: 12, background: 'var(--text-3)', marginLeft: 2, verticalAlign: 'middle' }} />}
                   </div>
                 )}
               </div>
             ) : priorityLoading ? (
-              <div className="flex items-center gap-3 py-2">
-                <div className="w-7 h-7 rounded-full animate-pulse" style={{ background: 'var(--bg-input)' }} />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 rounded-full animate-pulse" style={{ background: 'var(--bg-input)', width: '60%' }} />
-                  <div className="h-2.5 rounded-full animate-pulse" style={{ background: 'var(--bg-input)', width: '40%' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-input)', animation: 'pulse 1.5s infinite' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ height: 12, borderRadius: 6, background: 'var(--bg-input)', width: '55%', marginBottom: 8 }} />
+                  <div style={{ height: 10, borderRadius: 5, background: 'var(--bg-input)', width: '35%' }} />
                 </div>
               </div>
             ) : remaining === 0 && priorities.length > 0 ? (
-              <div className="flex items-center gap-3 py-2">
-                <span className="text-xl" style={{ color: '#4ade80' }}>✓</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+                <span style={{ fontSize: 20, color: '#4ade80' }}>✓</span>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: '#4ade80' }}>All priorities done</p>
-                  <p className="text-xs" style={{ color: 'var(--text-3)' }}>Good shift — refresh for an updated list</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#4ade80', margin: '0 0 3px' }}>All priorities done</p>
+                  <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>Good shift — refresh for an updated list</p>
                 </div>
               </div>
             ) : null}
@@ -838,79 +699,57 @@ First person. Confident. Meeting-ready. No waffle.`
         )
       })()}
 
-      {/* Morning Brief */}
-      <div className="card p-5" style={{ position: 'relative', boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      {/* ── Morning Brief ── */}
+      <div style={{ ...glass, padding: 20, position: 'relative' }}>
         <PresentationHotspot id="home-brief" demoMode={demoMode} />
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-sm" style={{ color: 'var(--text-1)', fontWeight: 700, letterSpacing: '-0.03em' }}>Morning Brief</h2>
-          <button onClick={() => autoGenerateBrief(latestKpis, projects, patterns)} disabled={briefStreaming}
-            className="text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-40"
-            style={{ background: 'rgba(232,130,12,0.12)', color: '#fb923c' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <h3 style={{ fontFamily: 'Geist, Inter, sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--text-1)', margin: 0, letterSpacing: '-0.02em' }}>Morning Brief</h3>
+          <button onClick={() => autoGenerateBrief(latestKpis, projects, patterns)} disabled={briefStreaming} style={{ fontSize: 11, fontWeight: 700, padding: '5px 12px', borderRadius: 8, background: 'rgba(249,115,22,0.1)', color: '#fb923c', border: 'none', cursor: 'pointer', opacity: briefStreaming ? 0.5 : 1 }}>
             {briefStreaming ? '…' : '↻ Refresh'}
           </button>
         </div>
         {displayBriefContent ? (
           <>
             {brief && !briefStreaming && (
-              <p className="text-[10px] mb-2" style={{ color: 'var(--text-3)' }}>
+              <p style={{ fontSize: 10, color: 'var(--text-3)', margin: '0 0 8px' }}>
                 {new Date(brief.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
               </p>
             )}
-            <div className="overflow-y-auto max-h-56">
+            <div style={{ maxHeight: 220, overflowY: 'auto' }}>
               <BriefMarkdown text={displayBriefContent} />
-              {briefStreaming && <span className="inline-block w-1 h-3 animate-pulse ml-0.5 align-middle" style={{ background: 'var(--text-3)' }} />}
+              {briefStreaming && <span style={{ display: 'inline-block', width: 4, height: 12, background: 'var(--text-3)', marginLeft: 2, verticalAlign: 'middle' }} />}
             </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div style={{ textAlign: 'center', padding: '24px 0' }}>
             {briefStreaming
-              ? <span className="text-xs animate-pulse" style={{ color: 'var(--text-3)' }}>Generating brief…</span>
-              : <><div className="text-3xl mb-3" style={{ color: 'var(--text-3)', opacity: 0.5 }}>◈</div><p className="text-xs" style={{ color: 'var(--text-3)' }}>Generating your brief…</p></>
+              ? <span style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>Generating brief…</span>
+              : <><div style={{ fontSize: 28, marginBottom: 8, opacity: 0.3 }}>◈</div><p style={{ fontSize: 13, color: 'var(--text-3)', margin: 0 }}>Generating your brief…</p></>
             }
           </div>
         )}
       </div>
 
-      {/* Quick agents */}
-      <div className="grid grid-cols-3 gap-3">
-
-        {/* Tier 2 Prep — pre-loaded with live context */}
-        <button
-          onClick={openTier2}
-          className="card px-4 py-3 text-left flex items-center gap-3 hover:opacity-80 transition-all"
-          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <span className="text-lg w-7 flex-shrink-0 text-center" style={{ color: '#f87171' }}>⬡</span>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Prepare Tier 2</div>
-            <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>RAG status · talking points · escalations</div>
-          </div>
-          <span className="ml-auto text-sm flex-shrink-0" style={{ color: 'var(--text-3)' }}>→</span>
-        </button>
-
-        {/* Gemba Agent */}
-        <button onClick={() => onOpenAgent('gemba-agent', null)}
-          className="card px-4 py-3 text-left flex items-center gap-3 hover:opacity-80 transition-all"
-          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <span className="text-lg w-7 flex-shrink-0 text-center" style={{ color: '#4ade80' }}>◎</span>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>Gemba Agent</div>
-            <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>Structure floor obs · identify waste</div>
-          </div>
-          <span className="ml-auto text-sm flex-shrink-0" style={{ color: 'var(--text-3)' }}>→</span>
-        </button>
-
-        {/* Project Coach */}
-        <button onClick={() => onOpenAgent('project-agent', null)}
-          className="card px-4 py-3 text-left flex items-center gap-3 hover:opacity-80 transition-all"
-          style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <span className="text-lg w-7 flex-shrink-0 text-center" style={{ color: '#a78bfa' }}>◆</span>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>DMAIC Coach</div>
-            <div className="text-[10px] mt-0.5" style={{ color: 'var(--text-3)' }}>Guide project stage · root cause · actions</div>
-          </div>
-          <span className="ml-auto text-sm flex-shrink-0" style={{ color: 'var(--text-3)' }}>→</span>
-        </button>
-
+      {/* ── Quick Agents ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        {[
+          { label: 'Prepare Tier 2', sub: 'RAG status · talking points · escalations', icon: '⬡', color: '#f87171', onClick: openTier2 },
+          { label: 'Gemba Agent',    sub: 'Structure floor obs · identify waste',       icon: '◎', color: '#4ade80', onClick: () => onOpenAgent('gemba-agent', null) },
+          { label: 'DMAIC Coach',    sub: 'Guide project stage · root cause · actions', icon: '◆', color: '#a78bfa', onClick: () => onOpenAgent('project-agent', null) },
+        ].map(btn => (
+          <button key={btn.label} onClick={btn.onClick} style={{ ...glass, padding: '14px 16px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.06)', transition: 'all 220ms cubic-bezier(0.34,1.56,0.64,1)' }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = `${btn.color}30` }}
+            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)' }}>
+            <span style={{ fontSize: 20, width: 32, textAlign: 'center', flexShrink: 0, color: btn.color }}>
+              {btn.icon}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 3 }}>{btn.label}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{btn.sub}</div>
+            </div>
+            <span style={{ color: 'var(--text-3)', fontSize: 16, flexShrink: 0 }}>→</span>
+          </button>
+        ))}
       </div>
 
     </div>

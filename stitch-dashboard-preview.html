@@ -1,0 +1,308 @@
+﻿<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Continuum CI - Operations Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Geist:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "background": "#09090b",
+          "nav": "#0d0d10",
+          "card": "#111114",
+          "input": "#18181c",
+          "accent": "#f97316",
+          "secondary": "#6366f1",
+          "text-primary": "#f0f0f2",
+          "text-secondary": "#8b8b97",
+          "text-muted": "#4a4a57",
+          "border-color": "rgba(255,255,255,0.06)",
+          "success": "#4ade80",
+          "warning": "#fb923c",
+          "error": "#f87171"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "fontFamily": {
+                "headline": ["Geist"],
+                "display": ["Geist"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body {
+    background-color: theme('colors.background');
+    color: theme('colors.text-primary');
+    font-family: theme('fontFamily.body');
+    -webkit-font-smoothing: antialiased;
+  }
+  .glass-card {
+    background-color: theme('colors.card');
+    border: 1px solid theme('colors.border-color');
+    backdrop-filter: blur(8px);
+    border-radius: theme('borderRadius.lg');
+  }
+</style>
+</head>
+<body class="flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="w-52 h-screen fixed left-0 top-0 border-r border-white/5 bg-[#0d0d10] flex flex-col h-full py-6 z-10">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-orange-700 flex items-center justify-center text-white font-headline font-bold text-lg">C</div>
+<div>
+<h1 class="text-accent font-bold tracking-tighter text-lg font-headline">Continuum</h1>
+<div class="flex items-center gap-1.5 mt-0.5">
+<div class="w-1.5 h-1.5 rounded-full bg-success"></div>
+<span class="text-text-secondary text-[10px] uppercase tracking-widest font-semibold">CI Management</span>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-1">
+<a class="flex items-center gap-3 bg-gradient-to-r from-orange-500/10 to-transparent text-orange-500 border-l-2 border-orange-500 rounded-r-lg font-semibold px-4 py-2 font-['Inter'] text-[13px] tracking-tight scale-95 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+        Dashboard
+      </a>
+<a class="flex items-center gap-3 text-[#8b8b97] hover:text-[#f0f0f2] hover:bg-white/5 px-4 py-2 rounded-r-lg font-['Inter'] text-[13px] tracking-tight transition-all duration-200" href="#">
+<span class="material-symbols-outlined">directions_walk</span>
+        Floor Walk
+      </a>
+<a class="flex items-center gap-3 text-[#8b8b97] hover:text-[#f0f0f2] hover:bg-white/5 px-4 py-2 rounded-r-lg font-['Inter'] text-[13px] tracking-tight transition-all duration-200" href="#">
+<span class="material-symbols-outlined">assignment</span>
+        Projects
+      </a>
+<a class="flex items-center gap-3 text-[#8b8b97] hover:text-[#f0f0f2] hover:bg-white/5 px-4 py-2 rounded-r-lg font-['Inter'] text-[13px] tracking-tight transition-all duration-200" href="#">
+<span class="material-symbols-outlined">folder_special</span>
+        Portfolio
+      </a>
+<a class="flex items-center gap-3 text-[#8b8b97] hover:text-[#f0f0f2] hover:bg-white/5 px-4 py-2 rounded-r-lg font-['Inter'] text-[13px] tracking-tight transition-all duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+        Data
+      </a>
+<a class="flex items-center gap-3 text-[#8b8b97] hover:text-[#f0f0f2] hover:bg-white/5 px-4 py-2 rounded-r-lg font-['Inter'] text-[13px] tracking-tight transition-all duration-200" href="#">
+<span class="material-symbols-outlined">assessment</span>
+        Reports
+      </a>
+<a class="flex items-center gap-3 text-[#8b8b97] hover:text-[#f0f0f2] hover:bg-white/5 px-4 py-2 rounded-r-lg font-['Inter'] text-[13px] tracking-tight transition-all duration-200" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+        Process Maps
+      </a>
+</nav>
+<div class="px-4 mt-auto">
+<div class="bg-input rounded-lg p-2 flex items-center justify-between text-text-secondary text-xs border border-white/5 cursor-text">
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px]">search</span> AI Command Bar</span>
+<span class="bg-white/10 px-1.5 py-0.5 rounded text-[10px] font-mono tracking-wider">âŒ˜K</span>
+</div>
+<div class="mt-4 flex items-center justify-between pt-4 border-t border-white/5">
+<div class="flex items-center gap-2 text-text-secondary text-xs">
+<span class="material-symbols-outlined text-[16px]">location_on</span>
+          Amazon FC
+        </div>
+<div class="w-6 h-6 rounded bg-gradient-to-br from-accent to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+          R
+        </div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-52 flex-1 h-screen overflow-y-auto bg-background custom-scrollbar">
+<!-- TopNavBar -->
+<header class="docked full-width top-0 sticky z-50 bg-[#09090b]/80 backdrop-blur-md border-b border-white/5 flex justify-between items-center px-8 py-4">
+<div>
+<h2 class="font-['Geist'] font-bold text-xl tracking-[-0.03em] text-text-primary">Good morning, Ryan</h2>
+<div class="flex items-center gap-3 mt-1 text-sm">
+<span class="text-text-secondary">Tuesday, Oct 24</span>
+<span class="text-white/20">â€¢</span>
+<div class="flex items-center gap-1.5 bg-success/10 text-success px-2 py-0.5 rounded text-xs font-semibold">
+<div class="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div>
+                    Live Â· Day Shift
+                </div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-text-secondary text-sm hidden md:block">Site Status: Online</span>
+<button class="text-[#8b8b97] hover:text-orange-400 transition-colors p-2 cursor-pointer">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-[#8b8b97] hover:text-orange-400 transition-colors p-2 cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<img alt="User Avatar" class="w-8 h-8 rounded-lg object-cover border border-white/10 ml-2" data-alt="professional headshot of a man with short brown hair wearing a dark shirt against a neutral gray background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwQDG0Z4oNvE6bQPmcY_AoO3tQNudXSQMLkHJN1lYZGxhj-m3IIujfzDkyhtWG9sX5JrUqeKnA88H1xl01GxM83nlQPhaJdBPVbo0QIW5WHPfE-ILvjKKzRcGGHO5N3Z8HGtJe7ASzkhVk77SI2GdPoufFcUf-JcASjC0veLLt4awsegpufldiJ9pbDgX7yoe9bgwN-E9noT8u-Dt3XPssT-615b0r5K8dcJZOa8tc_DiUSK_2yLRdmiDppHJKI6RBtM2Afv3EcuA"/>
+</div>
+</header>
+<div class="p-8 max-w-7xl mx-auto space-y-6">
+<!-- KPI Row -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- KPI 1 -->
+<div class="glass-card p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-5xl text-warning">speed</span>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-text-secondary text-[10px] font-semibold uppercase tracking-[0.07em]">Units Per Hour</h3>
+<span class="bg-warning/10 text-warning text-xs px-2 py-0.5 rounded font-medium border border-warning/20">-6%</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-[48px] font-headline font-bold tracking-[-0.05em] leading-none text-text-primary">94</span>
+</div>
+<div class="mt-4 flex items-center justify-between text-sm">
+<span class="text-text-muted">Target: 100</span>
+<div class="w-24 h-8 bg-gradient-to-r from-transparent via-warning/10 to-warning/30 rounded"></div>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="glass-card p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-5xl text-success">fact_check</span>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-text-secondary text-[10px] font-semibold uppercase tracking-[0.07em]">Pick Accuracy</h3>
+<span class="bg-success/10 text-success text-xs px-2 py-0.5 rounded font-medium border border-success/20">On Track</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-[48px] font-headline font-bold tracking-[-0.05em] leading-none text-text-primary">99.8<span class="text-2xl text-text-muted">%</span></span>
+</div>
+<div class="mt-4 flex items-center justify-between text-sm">
+<span class="text-text-muted">Target: 99.5%</span>
+<div class="w-24 h-8 bg-gradient-to-r from-transparent via-success/10 to-success/30 rounded"></div>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="glass-card p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-5xl text-success">bug_report</span>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-text-secondary text-[10px] font-semibold uppercase tracking-[0.07em]">DPMO</h3>
+<span class="bg-success/10 text-success text-xs px-2 py-0.5 rounded font-medium border border-success/20">Optimal</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-[48px] font-headline font-bold tracking-[-0.05em] leading-none text-text-primary">312</span>
+</div>
+<div class="mt-4 flex items-center justify-between text-sm">
+<span class="text-text-muted">Target: &lt;500</span>
+<div class="w-24 h-8 bg-gradient-to-r from-transparent via-success/10 to-success/30 rounded"></div>
+</div>
+</div>
+<!-- KPI 4 -->
+<div class="glass-card p-5 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-5xl text-warning">local_shipping</span>
+</div>
+<div class="flex justify-between items-start mb-2">
+<h3 class="text-text-secondary text-[10px] font-semibold uppercase tracking-[0.07em]">Dock to Stock</h3>
+<span class="bg-warning/10 text-warning text-xs px-2 py-0.5 rounded font-medium border border-warning/20">At Risk</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-[48px] font-headline font-bold tracking-[-0.05em] leading-none text-text-primary">97.2<span class="text-2xl text-text-muted">%</span></span>
+</div>
+<div class="mt-4 flex items-center justify-between text-sm">
+<span class="text-text-muted">Target: 98.0%</span>
+<div class="w-24 h-8 bg-gradient-to-r from-transparent via-warning/10 to-warning/30 rounded"></div>
+</div>
+</div>
+</div>
+<!-- Middle Row -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Active Projects -->
+<div class="glass-card p-6 flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-headline font-bold">Active Projects</h3>
+<button class="text-accent text-sm hover:text-orange-400 transition-colors flex items-center gap-1">View All <span class="material-symbols-outlined text-[16px]">arrow_forward</span></button>
+</div>
+<div class="space-y-4 flex-1">
+<!-- Project 1 -->
+<div class="flex items-center justify-between p-3 rounded bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">precision_manufacturing</span>
+</div>
+<div>
+<h4 class="text-sm font-medium text-text-primary">Pack Line Ergonomics</h4>
+<p class="text-xs text-text-muted">Lead: Sarah J. Â· Outbound</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded text-xs font-medium bg-accent/10 text-accent border border-accent/20">Improve</span>
+</div>
+<!-- Project 2 -->
+<div class="flex items-center justify-between p-3 rounded bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">inventory_2</span>
+</div>
+<div>
+<h4 class="text-sm font-medium text-text-primary">Stow Defect Reduction</h4>
+<p class="text-xs text-text-muted">Lead: Mike R. Â· Inbound</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20">Measure</span>
+</div>
+<!-- Project 3 -->
+<div class="flex items-center justify-between p-3 rounded bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.04] transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">forklift</span>
+</div>
+<div>
+<h4 class="text-sm font-medium text-text-primary">PIT Traffic Flow Optimization</h4>
+<p class="text-xs text-text-muted">Lead: Alex K. Â· Floor</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded text-xs font-medium bg-white/5 text-text-secondary border border-white/10">Identify</span>
+</div>
+</div>
+</div>
+<!-- Today's Observations -->
+<div class="glass-card p-6 flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-headline font-bold">Today's Observations</h3>
+<button class="w-8 h-8 rounded bg-accent/10 text-accent flex items-center justify-center hover:bg-accent hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">add</span>
+</button>
+</div>
+<div class="space-y-4 flex-1">
+<!-- Obs 1 -->
+<div class="p-4 rounded border border-white/[0.04] bg-gradient-to-r from-warning/5 to-transparent relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-warning rounded-l"></div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-xs font-medium text-warning bg-warning/10 px-2 py-0.5 rounded">Motion Waste</span>
+<span class="text-xs text-text-muted">10:42 AM</span>
+</div>
+<p class="text-sm text-text-primary mb-2">Associates at Pack Station 4 walking extra 10ft for dunnage replenishment.</p>
+<div class="flex gap-2">
+<span class="text-[10px] uppercase tracking-widest text-text-secondary border border-white/10 px-1.5 py-0.5 rounded">Pack</span>
+<span class="text-[10px] uppercase tracking-widest text-text-secondary border border-white/10 px-1.5 py-0.5 rounded">A-Shift</span>
+</div>
+</div>
+<!-- Obs 2 -->
+<div class="p-4 rounded border border-white/[0.04] bg-white/[0.02] relative">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-secondary rounded-l"></div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-xs font-medium text-secondary bg-secondary/10 px-2 py-0.5 rounded">Waiting Time</span>
+<span class="text-xs text-text-muted">08:15 AM</span>
+</div>
+<p class="text-sm text-text-primary mb-2">Pallet jack bottleneck at dock door 12 causing 5 min delay.</p>
+<div class="flex gap-2">
+<span class="text-[10px] uppercase tracking-widest text-text-secondary border border-white/10 px-1.5 py-0.5 rounded">Receive</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

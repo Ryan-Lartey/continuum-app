@@ -1,0 +1,316 @@
+﻿<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Geist:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        background: "#09090b",
+                        nav: "#0d0d10",
+                        card: "#111114",
+                        input: "#18181c",
+                        accent: "#f97316",
+                        secondary: "#6366f1",
+                        textPrimary: "#f0f0f2",
+                        textSecondary: "#8b8b97",
+                        textMuted: "#4a4a57",
+                        border: "rgba(255,255,255,0.06)",
+                        success: "#4ade80",
+                        warning: "#fb923c",
+                        error: "#f87171"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        "headline": ["Geist"],
+                        "display": ["Geist"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0A0B0F;
+            color: #f0f0f2;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(17, 17, 20, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .chart-gradient {
+            background: linear-gradient(180deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0) 100%);
+        }
+    </style>
+</head>
+<body class="antialiased">
+<!-- TopNavBar Implementation -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 h-16 bg-zinc-950/80 backdrop-blur-md border-b border-white/5 shadow-2xl shadow-black/50 font-sans antialiased text-[13px] tracking-tight">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-zinc-100">Continuum</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="text-orange-500 border-b-2 border-orange-500 pb-1 cursor-pointer active:scale-95 transition-colors duration-200" href="#">Dashboard</a>
+<a class="text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-colors duration-200 cursor-pointer active:scale-95" href="#">Analytics</a>
+<a class="text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-colors duration-200 cursor-pointer active:scale-95" href="#">Inventory</a>
+<a class="text-zinc-400 hover:text-zinc-200 hover:bg-white/5 transition-colors duration-200 cursor-pointer active:scale-95" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-lg border border-white/5 text-zinc-400">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+<span>Date Range</span>
+</div>
+<button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded font-medium transition-all active:scale-95">Export CSV</button>
+<div class="flex items-center gap-3 ml-4 border-l border-white/10 pl-4">
+<span class="material-symbols-outlined text-zinc-400 cursor-pointer hover:text-white transition-colors">notifications</span>
+<span class="material-symbols-outlined text-zinc-400 cursor-pointer hover:text-white transition-colors">settings</span>
+<div class="w-8 h-8 rounded-full bg-zinc-800 border border-white/10 overflow-hidden">
+<img alt="User Profile" data-alt="professional portrait of a warehouse logistics manager in a dark studio setting with soft rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_E_QlSGMR1NpK5rCq9WflgCKG9Oq_tVrbZQuwVF2K14sj67nXduxVQ2NXNv3PbSLYLUNgQeNpLSaZx6hWoFUJx33kSFmp1k4Ae_Z_n6TuA34nbeS_y8nxz140XgBTT0SYFyvjA4bV_Gi-OcYY_1W8mJBDEpyB6oVSVKkX0A5D2DalvTendExHXnl1ygYryY3AY5iQQPYbMdf2WT9scEWx0iO0TIdEsiXltypIChCQxirQyJdP2tn0INGh9gXKgzE_RXxu7A9VknA"/>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar Implementation -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px)] w-64 flex flex-col py-4 bg-zinc-900/50 backdrop-blur-xl border-r border-white/5 font-sans text-[13px] font-medium z-40">
+<div class="px-4 mb-6">
+<div class="flex items-center gap-3 mb-1">
+<div class="w-8 h-8 rounded bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+<span class="material-symbols-outlined text-orange-500 text-lg">analytics</span>
+</div>
+<div>
+<h2 class="text-orange-500 font-bold leading-none">Metrics</h2>
+<p class="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Warehouse CI</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 mx-2 bg-orange-500/10 text-orange-500 border-r-2 border-orange-500 rounded-lg ease-out duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span>Productivity</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 mx-2 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 rounded-lg transition-all ease-out duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="security">security</span>
+<span>Safety</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 mx-2 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 rounded-lg transition-all ease-out duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+<span>Quality</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 mx-2 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 rounded-lg transition-all ease-out duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span>Cost</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 mx-2 text-zinc-500 hover:text-zinc-300 hover:bg-white/5 rounded-lg transition-all ease-out duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="local_shipping">local_shipping</span>
+<span>Delivery</span>
+</a>
+</nav>
+<div class="mt-auto px-4 space-y-4">
+<button class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-2 rounded-lg border border-white/5 text-[12px] font-semibold transition-all">
+                New Report
+            </button>
+<div class="pt-4 border-t border-white/5 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:text-zinc-300 transition-all" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="help_outline">help_outline</span>
+<span>Help</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-500 hover:text-zinc-300 transition-all" href="#">
+<span class="material-symbols-outlined text-sm" data-icon="history_edu">history_edu</span>
+<span>Logs</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 min-h-screen">
+<div class="max-w-[1400px] mx-auto p-8 space-y-8">
+<!-- Context Header & Controls -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h1 class="font-headline text-3xl text-textPrimary tracking-tight">Productivity Metrics</h1>
+<p class="text-textSecondary mt-1">Operational throughput and labor efficiency analysis</p>
+</div>
+<div class="flex items-center gap-3 bg-card p-1 rounded-lg border border-border">
+<button class="px-4 py-1.5 rounded bg-orange-500/10 text-orange-500 text-xs font-bold uppercase tracking-wider">Historical</button>
+<button class="px-4 py-1.5 rounded text-textMuted hover:text-textSecondary text-xs font-bold uppercase tracking-wider transition-colors">Real-time</button>
+</div>
+</div>
+<!-- KPI Summary Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="glass-card p-6 rounded-xl">
+<p class="font-label text-[10px] text-textMuted tracking-[0.07em] mb-2 uppercase">Average Throughout</p>
+<div class="flex items-baseline gap-2">
+<span class="font-headline text-[48px] leading-tight tracking-[-0.05em] text-textPrimary">142</span>
+<span class="text-textSecondary text-sm">Units/Hr</span>
+</div>
+<div class="flex items-center gap-1.5 mt-2 text-success text-[11px] font-semibold">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+12.4% from last period</span>
+</div>
+</div>
+<div class="glass-card p-6 rounded-xl border-orange-500/20">
+<p class="font-label text-[10px] text-textMuted tracking-[0.07em] mb-2 uppercase">Peak Performance</p>
+<div class="flex items-baseline gap-2">
+<span class="font-headline text-[48px] leading-tight tracking-[-0.05em] text-orange-500">188</span>
+<span class="text-textSecondary text-sm">Units/Hr</span>
+</div>
+<div class="flex items-center gap-1.5 mt-2 text-textMuted text-[11px]">
+<span class="material-symbols-outlined text-sm">event_available</span>
+<span>Recorded Oct 24, 2023</span>
+</div>
+</div>
+<div class="glass-card p-6 rounded-xl">
+<p class="font-label text-[10px] text-textMuted tracking-[0.07em] mb-2 uppercase">Latest Reading</p>
+<div class="flex items-baseline gap-2">
+<span class="font-headline text-[48px] leading-tight tracking-[-0.05em] text-textPrimary">139</span>
+<span class="text-textSecondary text-sm">Units/Hr</span>
+</div>
+<div class="flex items-center gap-1.5 mt-2 text-error text-[11px] font-semibold">
+<span class="material-symbols-outlined text-sm">trending_down</span>
+<span>-2.1% deviation</span>
+</div>
+</div>
+</div>
+<!-- Main Chart Section -->
+<div class="glass-card rounded-xl p-8 overflow-hidden relative">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h3 class="font-headline text-lg text-textPrimary">Performance Trend</h3>
+<p class="text-textSecondary text-xs">12-week rolling average vs target</p>
+</div>
+<div class="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-orange-500"></div>
+<span class="text-textSecondary">Actual</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-0.5 bg-zinc-600"></div>
+<span class="text-textSecondary">Target (150)</span>
+</div>
+</div>
+</div>
+<!-- Simulated Chart Container -->
+<div class="relative h-[300px] w-full mt-4">
+<!-- Grid Lines -->
+<div class="absolute inset-0 flex flex-col justify-between opacity-10">
+<div class="border-b border-white w-full h-0"></div>
+<div class="border-b border-white w-full h-0"></div>
+<div class="border-b border-white w-full h-0"></div>
+<div class="border-b border-white w-full h-0"></div>
+<div class="border-b border-white w-full h-0"></div>
+</div>
+<!-- Target Line Overlay -->
+<div class="absolute top-[40%] w-full border-t border-dashed border-zinc-600 z-10"></div>
+<!-- SVG Path for Line Chart -->
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 100">
+<!-- Area Fill -->
+<path d="M0,80 L100,75 L200,85 L300,60 L400,65 L500,45 L600,40 L700,55 L800,30 L900,45 L1000,35 L1000,100 L0,100 Z" fill="url(#chartFill)"></path>
+<!-- Main Line -->
+<path d="M0,80 L100,75 L200,85 L300,60 L400,65 L500,45 L600,40 L700,55 L800,30 L900,45 L1000,35" fill="none" stroke="#f97316" stroke-width="2"></path>
+<defs>
+<lineargradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#f97316" stop-opacity="0.15"></stop>
+<stop offset="100%" stop-color="#f97316" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- X-Axis Labels -->
+<div class="absolute -bottom-6 w-full flex justify-between text-[10px] text-textMuted font-medium uppercase tracking-tighter">
+<span>WK 01</span>
+<span>WK 02</span>
+<span>WK 03</span>
+<span>WK 04</span>
+<span>WK 05</span>
+<span>WK 06</span>
+<span>WK 07</span>
+<span>WK 08</span>
+<span>WK 09</span>
+<span>WK 10</span>
+<span>WK 11</span>
+<span>WK 12</span>
+</div>
+</div>
+</div>
+<!-- Data Table Section -->
+<div class="glass-card rounded-xl overflow-hidden">
+<div class="px-6 py-4 border-b border-border flex items-center justify-between">
+<h3 class="font-headline text-textPrimary">Detailed Breakdown</h3>
+<div class="flex gap-2">
+<button class="material-symbols-outlined text-textMuted hover:text-textPrimary p-1 transition-colors">filter_list</button>
+<button class="material-symbols-outlined text-textMuted hover:text-textPrimary p-1 transition-colors">download</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-white/[0.02] border-b border-border">
+<th class="px-6 py-4 font-label text-[10px] text-textMuted tracking-widest uppercase">Date</th>
+<th class="px-6 py-4 font-label text-[10px] text-textMuted tracking-widest uppercase text-right">Actual</th>
+<th class="px-6 py-4 font-label text-[10px] text-textMuted tracking-widest uppercase text-right">Target</th>
+<th class="px-6 py-4 font-label text-[10px] text-textMuted tracking-widest uppercase text-right">Variance</th>
+<th class="px-6 py-4 font-label text-[10px] text-textMuted tracking-widest uppercase">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border/40">
+<tr class="hover:bg-white/[0.02] transition-colors group">
+<td class="px-6 py-4 text-[13px] text-textSecondary">Oct 27, 2023</td>
+<td class="px-6 py-4 text-[13px] text-textPrimary font-semibold text-right">165.2</td>
+<td class="px-6 py-4 text-[13px] text-textMuted text-right">150.0</td>
+<td class="px-6 py-4 text-[13px] text-success font-medium text-right">+10.1%</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">Optimal</span>
+</td>
+</tr>
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="px-6 py-4 text-[13px] text-textSecondary">Oct 26, 2023</td>
+<td class="px-6 py-4 text-[13px] text-textPrimary font-semibold text-right">148.5</td>
+<td class="px-6 py-4 text-[13px] text-textMuted text-right">150.0</td>
+<td class="px-6 py-4 text-[13px] text-warning font-medium text-right">-1.0%</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-warning/10 text-warning border border-warning/20">Nominal</span>
+</td>
+</tr>
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="px-6 py-4 text-[13px] text-textSecondary">Oct 25, 2023</td>
+<td class="px-6 py-4 text-[13px] text-textPrimary font-semibold text-right">132.1</td>
+<td class="px-6 py-4 text-[13px] text-textMuted text-right">150.0</td>
+<td class="px-6 py-4 text-[13px] text-error font-medium text-right">-11.9%</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-error/10 text-error border border-error/20">Critical</span>
+</td>
+</tr>
+<tr class="hover:bg-white/[0.02] transition-colors">
+<td class="px-6 py-4 text-[13px] text-textSecondary">Oct 24, 2023</td>
+<td class="px-6 py-4 text-[13px] text-textPrimary font-semibold text-right">154.8</td>
+<td class="px-6 py-4 text-[13px] text-textMuted text-right">150.0</td>
+<td class="px-6 py-4 text-[13px] text-success font-medium text-right">+3.2%</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">Optimal</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</body></html>

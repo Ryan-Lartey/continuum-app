@@ -1,0 +1,307 @@
+﻿<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Continuum CI | Process Maps</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;700&amp;family=Inter:wght@400;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: "#09090b",
+                            nav: "#0d0d10",
+                            card: "#111114",
+                            input: "#18181c",
+                            accent: "#f97316",
+                            secondary: "#6366f1",
+                            text: "#f0f0f2",
+                            muted: "#8b8b97",
+                            dim: "#4a4a57",
+                            border: "rgba(255,255,255,0.06)"
+                        }
+                    },
+                    fontFamily: {
+                        headline: ["Geist"],
+                        display: ["Geist"],
+                        body: ["Inter"],
+                        label: ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-card {
+            background: rgba(17, 17, 20, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .canvas-grid {
+            background-image: radial-gradient(rgba(249, 115, 22, 0.05) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+        .swimlane-label {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="bg-brand-bg text-brand-text font-body selection:bg-brand-accent selection:text-white overflow-hidden h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-[#0d0d10] dark:bg-[#0d0d10] font-['Geist'] text-[13px] tracking-[-0.03em] docked full-width top-0 border-b border-white/10 shadow-xl flex justify-between items-center px-6 py-3 w-full z-50">
+<div class="flex items-center gap-8">
+<div class="text-lg font-bold tracking-tighter text-[#f0f0f2]">Continuum CI</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-[#8b8b97] hover:text-[#f0f0f2] transition-colors duration-200" href="#">Dashboard</a>
+<a class="text-[#8b8b97] hover:text-[#f0f0f2] transition-colors duration-200" href="#">Inventory</a>
+<a class="text-orange-500 border-b-2 border-orange-500 pb-2 hover:text-[#f0f0f2] transition-colors duration-200" href="#">Process Maps</a>
+<a class="text-[#8b8b97] hover:text-[#f0f0f2] transition-colors duration-200" href="#">Analytics</a>
+<a class="text-[#8b8b97] hover:text-[#f0f0f2] transition-colors duration-200" href="#">Settings</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3 mr-4">
+<span class="material-symbols-outlined text-brand-muted text-lg">save</span>
+<span class="material-symbols-outlined text-brand-muted text-lg">notifications</span>
+<span class="material-symbols-outlined text-brand-muted text-lg">account_circle</span>
+</div>
+<button class="text-[#8b8b97] hover:text-[#f0f0f2] transition-colors duration-200 scale-95 active:scale-90 transition-transform">Share</button>
+<button class="bg-brand-accent text-white px-4 py-1.5 rounded-lg font-bold scale-95 active:scale-90 transition-transform">Export PDF</button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar (Left Tools) -->
+<aside class="bg-[#0d0d10] dark:bg-[#0d0d10] font-['Inter'] text-[13px] uppercase tracking-[0.07em] docked left-0 h-screen w-20 border-r border-white/5 flex flex-col items-center py-8 gap-6 h-full z-40">
+<div class="flex flex-col gap-4">
+<button class="bg-white/5 text-orange-500 rounded-lg p-3 transition-all duration-300 ease-in-out hover:bg-white/5 hover:text-[#f0f0f2]">
+<span class="material-symbols-outlined">architecture</span>
+</button>
+<button class="text-[#4a4a57] p-3 transition-all duration-300 ease-in-out hover:bg-white/5 hover:text-[#f0f0f2]">
+<span class="material-symbols-outlined">layers</span>
+</button>
+<button class="text-[#4a4a57] p-3 transition-all duration-300 ease-in-out hover:bg-white/5 hover:text-[#f0f0f2]">
+<span class="material-symbols-outlined">inventory_2</span>
+</button>
+<button class="text-[#4a4a57] p-3 transition-all duration-300 ease-in-out hover:bg-white/5 hover:text-[#f0f0f2]">
+<span class="material-symbols-outlined">history</span>
+</button>
+<div class="h-px w-8 bg-brand-border my-2"></div>
+<button class="text-[#4a4a57] p-3 transition-all duration-300 ease-in-out hover:bg-white/5 hover:text-[#f0f0f2]">
+<span class="material-symbols-outlined">edit_square</span>
+</button>
+<button class="text-[#4a4a57] p-3 transition-all duration-300 ease-in-out hover:bg-white/5 hover:text-[#f0f0f2]">
+<span class="material-symbols-outlined">near_me</span>
+</button>
+<button class="text-[#4a4a57] p-3 transition-all duration-300 ease-in-out hover:bg-white/5 hover:text-[#f0f0f2]">
+<span class="material-symbols-outlined">zoom_in</span>
+</button>
+</div>
+<div class="mt-auto flex flex-col gap-4">
+<button class="text-[#4a4a57] p-3 transition-all duration-300 ease-in-out hover:bg-white/5 hover:text-[#f0f0f2]">
+<span class="material-symbols-outlined">settings_input_component</span>
+</button>
+<div class="w-8 h-8 rounded-lg overflow-hidden border border-white/10">
+<img class="w-full h-full object-cover" data-alt="professional portrait of warehouse manager Sarah Jenkins in a corporate setting with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3Pq7DCjGWGz_-gv_zo2zbxdsiPB6vuoKYt0Xf1dqCf72bxSpnEc6IP0IXaI66q9_OQ7mVWEUTcHFlhfgTgNguXlze6xidh26FfVVpEUP-XAE9g__UYMwfiL3w31NMvPab8t6y7znihwAH2CG9IWYnGN9NgvNaxhb7rM6Lxv-JsOribJ-uAxXp-oJvpHzLRQOlEXZgpE7z9t-QZeLXSOlfHuDrHBp45wnwvFukHACK1H97YcGKLnVO0Iro8H6u3KOwrmCrdQoN75E"/>
+</div>
+</div>
+</aside>
+<!-- Main Canvas Area -->
+<main class="flex-1 flex flex-col relative bg-[#0a0b0f]">
+<!-- Sub Header -->
+<div class="h-16 border-b border-brand-border flex items-center justify-between px-8 bg-brand-bg/50 backdrop-blur-md z-30">
+<div class="flex items-center gap-6">
+<div>
+<h1 class="font-headline font-bold text-lg tracking-tight text-brand-text uppercase tracking-widest text-[10px] text-brand-muted">Process Map</h1>
+<p class="font-headline text-xl font-bold text-brand-text">Inbound Optimization</p>
+</div>
+<div class="h-8 w-px bg-brand-border"></div>
+<div class="flex flex-col">
+<span class="text-[10px] font-label text-brand-muted uppercase tracking-wider">Owner</span>
+<span class="text-sm font-medium text-brand-text">Sarah Jenkins</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-label text-brand-muted uppercase tracking-wider">Last Edited</span>
+<span class="text-sm font-medium text-brand-accent">2 mins ago</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex -space-x-2">
+<img class="w-7 h-7 rounded-full border-2 border-brand-bg object-cover" data-alt="portrait of a female colleague collaborating on process engine project" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKrU7ReSvyypmXCvXeDL8f-p9Cj1nUfNZxkCc007fVgv27Pv1uVfpAAqQiD4vDKFsYtQvfPaxfMqPpl-dvjO1QZHzHqb5OrJzwFBFVlTL7PUxHMc76a0MyTGrh6AemPY3isVAhdGUzOtwXYF2lHf482QJCPgpoW8_MvN-sMcDfbOqe5ZcDGcfQTYgYovW_jCoWH4yG_h4SZXLdTZ-NAz_5TktayDIKVaX0YHTC2iFHVCNIOU2jSTLtdtNQyIq2tGQDBTxeQw4fK1Q"/>
+<img class="w-7 h-7 rounded-full border-2 border-brand-bg object-cover" data-alt="portrait of a male engineering team member" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPBMuA-A279lhD8_wzLI1rkIWtwGxNcw4IqtsG0fHc87GBoi2DfgmCQ5xVBn3IZDXF6aI7hbG31fG97zENy7g-mGw1VroQcP9uX7VZQ4lT4X8dzlIZf79l8pDaYy_dqZLER0LQT7KWFn_rxqiqtuT1-TM-niguqhjvuNqHU229_79_gSHTvQ2QjjtgosaKdSA3G61XwDNcKOVuq4apjLRSZE-5u3jZbcoWEqnmfAHtK0wzzIyN6NlyZUFIrnmk53UFiImL8dMQwT0"/>
+<div class="w-7 h-7 rounded-full border-2 border-brand-bg bg-brand-card flex items-center justify-center text-[10px] font-bold">+3</div>
+</div>
+<button class="bg-brand-card border border-brand-border px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 hover:bg-brand-accent/10 transition-colors">
+<span class="material-symbols-outlined text-sm">history</span> Version History
+                    </button>
+</div>
+</div>
+<!-- Builder Canvas -->
+<div class="flex-1 overflow-auto relative canvas-grid bg-[#12141a]">
+<!-- Swimlane Container -->
+<div class="min-w-[1400px] flex flex-col">
+<!-- Lane: Receive -->
+<div class="flex min-h-[180px] border-b border-white/5 relative group">
+<div class="w-12 bg-brand-nav/80 flex items-center justify-center border-r border-white/5 sticky left-0 z-20">
+<span class="swimlane-label font-label text-[10px] font-bold text-brand-muted tracking-widest uppercase">Receive</span>
+</div>
+<div class="flex-1 p-8 relative flex items-center gap-24">
+<!-- Step 1 -->
+<div class="glass-card w-56 p-4 rounded-lg border-l-4 border-l-brand-accent relative z-10 shadow-2xl">
+<div class="flex justify-between items-start mb-3">
+<span class="material-symbols-outlined text-brand-accent text-xl" style="font-variation-settings: 'FILL' 1;">qr_code_scanner</span>
+<span class="text-[10px] font-label text-brand-muted">STEP 01</span>
+</div>
+<h4 class="text-[13px] font-bold text-brand-text mb-1">Scan Arrival ASN</h4>
+<p class="text-[11px] text-brand-muted leading-tight">Verify digital manifest against physical transport documents.</p>
+<div class="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
+<span class="bg-green-500/10 text-green-400 text-[9px] px-1.5 py-0.5 rounded font-bold">AUTOMATED</span>
+<span class="material-symbols-outlined text-sm text-brand-dim">more_horiz</span>
+</div>
+</div>
+<!-- Connector Line Simulation -->
+<svg class="absolute top-0 left-0 w-full h-full pointer-events-none overflow-visible">
+<path d="M 272 90 L 368 90" fill="none" stroke="rgba(249, 115, 22, 0.3)" stroke-width="2"></path>
+<polygon fill="rgba(249, 115, 22, 0.3)" points="368,90 358,85 358,95"></polygon>
+</svg>
+<!-- Step 2 -->
+<div class="glass-card w-56 p-4 rounded-lg border-l-4 border-l-brand-secondary relative z-10 shadow-2xl">
+<div class="flex justify-between items-start mb-3">
+<span class="material-symbols-outlined text-brand-secondary text-xl">forklift</span>
+<span class="text-[10px] font-label text-brand-muted">STEP 02</span>
+</div>
+<h4 class="text-[13px] font-bold text-brand-text mb-1">Unload Pallets</h4>
+<p class="text-[11px] text-brand-muted leading-tight">Stage pallets in the temporary receiving zone alpha.</p>
+<div class="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
+<span class="bg-blue-500/10 text-blue-400 text-[9px] px-1.5 py-0.5 rounded font-bold">MANUAL</span>
+<span class="material-symbols-outlined text-sm text-brand-dim">more_horiz</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Lane: Inspect -->
+<div class="flex min-h-[180px] border-b border-white/5 relative group">
+<div class="w-12 bg-brand-nav/80 flex items-center justify-center border-r border-white/5 sticky left-0 z-20">
+<span class="swimlane-label font-label text-[10px] font-bold text-brand-muted tracking-widest uppercase">Inspect</span>
+</div>
+<div class="flex-1 p-8 relative flex items-center gap-24">
+<!-- Step 3 (Down-connector) -->
+<svg class="absolute top-[-90px] left-[540px] w-full h-[200px] pointer-events-none overflow-visible">
+<path d="M 0 0 L 0 50 Q 0 90 40 90 L 80 90" fill="none" stroke="rgba(249, 115, 22, 0.3)" stroke-width="2" transform="translate(0, 0)"></path>
+</svg>
+<div class="glass-card w-56 p-4 rounded-lg border-l-4 border-l-brand-accent relative z-10 shadow-2xl ml-[584px]">
+<div class="flex justify-between items-start mb-3">
+<span class="material-symbols-outlined text-brand-accent text-xl">fact_check</span>
+<span class="text-[10px] font-label text-brand-muted">STEP 03</span>
+</div>
+<h4 class="text-[13px] font-bold text-brand-text mb-1">QA Quality Audit</h4>
+<p class="text-[11px] text-brand-muted leading-tight">Random sample check of SKU integrity and packaging.</p>
+<div class="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
+<span class="bg-orange-500/10 text-orange-400 text-[9px] px-1.5 py-0.5 rounded font-bold">CRITICAL</span>
+<span class="material-symbols-outlined text-sm text-brand-dim">more_horiz</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Lane: Store -->
+<div class="flex min-h-[180px] border-b border-white/5 relative group">
+<div class="w-12 bg-brand-nav/80 flex items-center justify-center border-r border-white/5 sticky left-0 z-20">
+<span class="swimlane-label font-label text-[10px] font-bold text-brand-muted tracking-widest uppercase">Store</span>
+</div>
+<div class="flex-1 p-8 relative flex items-center gap-24">
+<div class="glass-card w-56 p-4 rounded-lg border-l-4 border-l-green-500 relative z-10 shadow-2xl ml-[892px]">
+<div class="flex justify-between items-start mb-3">
+<span class="material-symbols-outlined text-green-500 text-xl">warehouse</span>
+<span class="text-[10px] font-label text-brand-muted">STEP 04</span>
+</div>
+<h4 class="text-[13px] font-bold text-brand-text mb-1">Put-away Logic</h4>
+<p class="text-[11px] text-brand-muted leading-tight">WMS assigns optimal bin location based on velocity.</p>
+<div class="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
+<span class="bg-green-500/10 text-green-400 text-[9px] px-1.5 py-0.5 rounded font-bold">WMS OPTIMIZED</span>
+<span class="material-symbols-outlined text-sm text-brand-dim">more_horiz</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Lane: Pick -->
+<div class="flex min-h-[180px] border-b border-white/5 relative group">
+<div class="w-12 bg-brand-nav/80 flex items-center justify-center border-r border-white/5 sticky left-0 z-20">
+<span class="swimlane-label font-label text-[10px] font-bold text-brand-muted tracking-widest uppercase">Pick</span>
+</div>
+<div class="flex-1 p-8"></div>
+</div>
+<!-- Lane: Dispatch -->
+<div class="flex min-h-[180px] border-b border-white/5 relative group">
+<div class="w-12 bg-brand-nav/80 flex items-center justify-center border-r border-white/5 sticky left-0 z-20">
+<span class="swimlane-label font-label text-[10px] font-bold text-brand-muted tracking-widest uppercase">Dispatch</span>
+</div>
+<div class="flex-1 p-8"></div>
+</div>
+</div>
+</div>
+<!-- Bottom Floating Controls -->
+<div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 rounded-xl glass-card border border-white/10 shadow-2xl z-40">
+<div class="flex items-center gap-4 pr-4 border-r border-white/10">
+<button class="text-brand-muted hover:text-brand-accent transition-colors"><span class="material-symbols-outlined">undo</span></button>
+<button class="text-brand-muted hover:text-brand-accent transition-colors"><span class="material-symbols-outlined">redo</span></button>
+</div>
+<div class="flex items-center gap-6 px-4 border-r border-white/10">
+<button class="text-brand-muted hover:text-brand-accent transition-colors"><span class="material-symbols-outlined">zoom_out</span></button>
+<span class="text-xs font-bold w-12 text-center">85%</span>
+<button class="text-brand-muted hover:text-brand-accent transition-colors"><span class="material-symbols-outlined">zoom_in</span></button>
+</div>
+<button class="text-brand-muted hover:text-brand-accent transition-colors">
+<span class="material-symbols-outlined">fullscreen</span>
+</button>
+</div>
+<!-- Right Panel Overlay (Properties) -->
+<aside class="absolute right-6 top-24 bottom-6 w-80 glass-card rounded-xl border border-white/10 shadow-2xl p-6 overflow-y-auto hidden lg:block z-40">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-bold text-sm uppercase tracking-wider text-brand-muted">Properties</h3>
+<span class="material-symbols-outlined text-brand-dim cursor-pointer">close</span>
+</div>
+<div class="space-y-6">
+<div>
+<label class="text-[10px] font-label text-brand-muted uppercase mb-2 block">Step Title</label>
+<input class="w-full bg-brand-input border border-white/10 rounded-lg px-3 py-2 text-[13px] focus:ring-1 focus:ring-brand-accent focus:border-brand-accent outline-none" type="text" value="Scan Arrival ASN"/>
+</div>
+<div>
+<label class="text-[10px] font-label text-brand-muted uppercase mb-2 block">Efficiency Rating</label>
+<div class="flex items-center gap-3">
+<div class="flex-1 h-2 bg-brand-input rounded-full overflow-hidden">
+<div class="h-full bg-brand-accent w-[92%]"></div>
+</div>
+<span class="text-xs font-bold">92%</span>
+</div>
+</div>
+<div>
+<label class="text-[10px] font-label text-brand-muted uppercase mb-2 block">Data Input Source</label>
+<div class="bg-brand-input border border-white/10 rounded-lg p-3 flex items-center gap-3">
+<span class="material-symbols-outlined text-brand-secondary">database</span>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-brand-text leading-tight">SAP EWM Connector</span>
+<span class="text-[10px] text-brand-dim uppercase">Live Connection</span>
+</div>
+</div>
+</div>
+<div>
+<label class="text-[10px] font-label text-brand-muted uppercase mb-2 block">Notes</label>
+<textarea class="w-full bg-brand-input border border-white/10 rounded-lg px-3 py-2 text-[13px] h-24 resize-none outline-none focus:ring-1 focus:ring-brand-accent">ASN data must be ingested before the transport driver arrives at the gatehouse for pre-clearance logic to trigger.</textarea>
+</div>
+<button class="w-full bg-white/5 border border-white/10 py-2 rounded-lg text-xs font-bold hover:bg-white/10 transition-colors">
+                        Advanced Configuration
+                    </button>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

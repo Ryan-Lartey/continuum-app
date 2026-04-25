@@ -1,0 +1,364 @@
+﻿<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Continuum CI - Projects Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: "#09090b",
+                            nav: "#0d0d10",
+                            card: "#111114",
+                            input: "#18181c",
+                            accent: "#f97316",
+                            secondary: "#6366f1",
+                            textPrimary: "#f0f0f2",
+                            textSecondary: "#8b8b97",
+                            textMuted: "#4a4a57",
+                            border: "rgba(255,255,255,0.06)",
+                            success: "#4ade80",
+                            warning: "#fb923c",
+                            error: "#f87171"
+                        }
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    fontFamily: {
+                        headline: ["Geist", "sans-serif"],
+                        display: ["Geist", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                        label: ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #09090b;
+            color: #f0f0f2;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-card {
+            background: rgba(17, 17, 20, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="antialiased overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="fixed left-0 top-0 h-screen w-64 border-r border-white/5 bg-zinc-950 flex flex-col p-4 gap-2 z-50">
+<div class="flex items-center gap-3 px-3 py-4 mb-4">
+<div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+</div>
+<div class="flex flex-col">
+<span class="font-['Geist'] font-bold text-orange-500 text-lg tracking-[-0.03em]">Continuum</span>
+<span class="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider">Warehouse Management</span>
+</div>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-400 hover:text-zinc-100 transition-colors hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-['Inter'] text-[13px] font-normal tracking-tight">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-400 hover:text-zinc-100 transition-colors hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">precision_manufacturing</span>
+<span class="font-['Inter'] text-[13px] font-normal tracking-tight">Floor Walk</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-zinc-900 text-orange-500 rounded-lg font-medium" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+<span class="font-['Inter'] text-[13px] font-normal tracking-tight">Projects</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-400 hover:text-zinc-100 transition-colors hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">workbench</span>
+<span class="font-['Inter'] text-[13px] font-normal tracking-tight">Portfolio</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-400 hover:text-zinc-100 transition-colors hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">database</span>
+<span class="font-['Inter'] text-[13px] font-normal tracking-tight">Data</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-400 hover:text-zinc-100 transition-colors hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-['Inter'] text-[13px] font-normal tracking-tight">Reports</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-zinc-400 hover:text-zinc-100 transition-colors hover:bg-white/5 rounded-lg" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-['Inter'] text-[13px] font-normal tracking-tight">Process Maps</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 border-t border-white/5">
+<div class="flex items-center gap-3 px-3 py-3">
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-white/10" data-alt="portrait of a professional man in a dark environment with soft dramatic studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUKKLg3j4Na4fJWqssQrQHJXsdFCRTALHLTS6vVxbZ0OO555rJDgazwdKBe3DKpEOzHMyXsSH-224aTIJlmnT0bGiZHgQCwo4vYhiU2hlvy_hvHgLMSCjsvGzoDHVLnxoAl6AGE5faYAAexG2f8vBCajXsWvrZkBbRxE2ta4KlmAczn3b6l5PJBbOdn5btYBeE93SLL04A6z836ZyJtjCOwrIm2kP0FWgPczdp406OGI00PWwijMtBc3crn6x9f8jYc9HpCAOWvaM"/>
+<div class="flex flex-col">
+<span class="text-[13px] font-medium text-white">Marcus Vance</span>
+<span class="text-[11px] text-zinc-500">Facility Manager</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 right-0 left-64 h-16 border-b border-white/5 bg-zinc-950/80 backdrop-blur-md z-40">
+<div class="flex justify-between items-center px-6 w-full h-full">
+<div class="flex items-center gap-6 flex-1">
+<h1 class="font-['Geist'] text-sm font-bold tracking-[-0.03em] text-white">Projects</h1>
+<div class="relative max-w-xs w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-lg">search</span>
+<input class="bg-zinc-900 border-none rounded-lg pl-10 pr-4 py-1.5 text-xs text-zinc-300 w-full focus:ring-1 focus:ring-orange-500/50" placeholder="Quick search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 bg-zinc-900/50 p-1 rounded-lg">
+<button class="px-3 py-1 text-[11px] font-semibold text-white bg-zinc-800 rounded-md shadow-sm">All</button>
+<button class="px-3 py-1 text-[11px] font-semibold text-zinc-400 hover:text-zinc-200">My Projects</button>
+<button class="px-3 py-1 text-[11px] font-semibold text-zinc-400 hover:text-zinc-200">Overdue</button>
+</div>
+<div class="h-4 w-[1px] bg-white/10 mx-2"></div>
+<div class="flex items-center gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:bg-white/5 transition-all">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:bg-white/5 transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-400 hover:bg-white/5 transition-all">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-lg font-bold text-xs shadow-lg shadow-orange-500/20 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+                    New Project
+                </button>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="pl-64 pt-16 h-screen overflow-hidden bg-[#0A0B0F]">
+<div class="h-full w-full p-6 flex gap-6 overflow-x-auto pb-10">
+<!-- Column: Backlog -->
+<div class="flex-shrink-0 w-80 flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-zinc-500"></span>
+<h2 class="font-headline font-bold text-sm tracking-tight text-zinc-200">Backlog</h2>
+<span class="text-[10px] font-bold bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-white/5">4</span>
+</div>
+<button class="text-zinc-500 hover:text-zinc-300">
+<span class="material-symbols-outlined text-xl">more_horiz</span>
+</button>
+</div>
+<div class="flex flex-col gap-3 overflow-y-auto pr-1">
+<!-- Project Card 1 -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-4 hover:border-orange-500/30 transition-all cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400">Planning</span>
+<span class="text-zinc-600 group-hover:text-zinc-400"><span class="material-symbols-outlined text-lg">bookmark</span></span>
+</div>
+<h3 class="font-headline font-bold text-sm leading-tight text-white group-hover:text-orange-400 transition-colors">Zone 4 Automation Integration</h3>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-[11px] text-zinc-500">
+<span>Progress</span>
+<span>0%</span>
+</div>
+<div class="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+<div class="h-full bg-zinc-700 w-0"></div>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex -space-x-2">
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-brand-card" data-alt="portrait of a focused professional man in corporate attire" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPbmNdWaG4rcRixBEOcNagigOJGIiMzWr6BjoUv3xn-z2hlrgqOB4iOrSVnLSp6SXHrNUWRJMnCQPbiqcpWdTzO_GoVrQxWpRlCIU5yriaHS_jzNzkHLQMjwJxJF79vVtd-byfYOs2nZS5C7efPBXVS7r6j7VMDkZdGQn_4KfttjWbsERw7k3rcAQXKune9OfPm4wYmC8uVw_yFlVzeuCkc2Pqd_737dnfA9rQxG_sbuWEtTPiJY5xY2UqFGHjFnuzwYaoLkPGrwM"/>
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-brand-card" data-alt="headshot of a smiling woman in professional business attire" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXvRNsnfkjQDesC8M5bQoQMV4vG2xQODF2jgfa9jxZde3GFkZxhkYD5ZuRwXDf4iw7jWo5nj6vKqzKYqOv72434ObdydKfJ2UnK8U77Ul8I63mpcnxH9NNZ59Jn_7fL91_EtUI7eGAnWNN-hJmmyWPLSl_UdYwUNkj9CUMNYjS_RaALJElL_0_BE92RYNqr-al61aMmeGJWYTCd9O2TggpCYEU8PhO76nF08du8z7mqhjtlpLVmISqJ2XFobf18tmmRT0WocfJ4ag"/>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 bg-zinc-900/50 rounded-lg text-[10px] font-medium text-zinc-500">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                Oct 12
+                            </div>
+</div>
+</div>
+<!-- Project Card 2 -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-4 hover:border-orange-500/30 transition-all cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-orange-500/10 text-orange-500">Urgent</span>
+<span class="text-zinc-600 group-hover:text-zinc-400"><span class="material-symbols-outlined text-lg">warning</span></span>
+</div>
+<h3 class="font-headline font-bold text-sm leading-tight text-white">Forklift Fleet Electrification</h3>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-[11px] text-zinc-500">
+<span>Progress</span>
+<span>12%</span>
+</div>
+<div class="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+<div class="h-full bg-orange-500/40 w-[12%]"></div>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex -space-x-2">
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-brand-card" data-alt="professional male profile photo with neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCuAiRw4dLmE1SVelDsP2jE1rLf1WPvVl95nraKNmnUh3O2xNxZNmPSQJlWF9T6uOxmV9AvNkm02STKg7kuhVSKkISaciVQs6JDtexUgSmjXBzICdEV5xcyIRmGsYyUna6h2BoWPrt0b-P7Ubeh_5rXkeivNfYMWiHYK57X2omm1c1gTm6AWB3d_6pSqAjjAbX-SaHu9fD1YhbTRBB75FoKtEdqHBI4sYXF5E54nDQ18B0eo3cyyifvL2K3npxqLC0RKXi3leFjPhQ"/>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 bg-zinc-900/50 rounded-lg text-[10px] font-medium text-brand-error">
+<span class="material-symbols-outlined text-[14px]">history</span>
+                                Overdue
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column: In Progress -->
+<div class="flex-shrink-0 w-80 flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<h2 class="font-headline font-bold text-sm tracking-tight text-zinc-200">In Progress</h2>
+<span class="text-[10px] font-bold bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-white/5">2</span>
+</div>
+<button class="text-zinc-500 hover:text-zinc-300">
+<span class="material-symbols-outlined text-xl">more_horiz</span>
+</button>
+</div>
+<div class="flex flex-col gap-3 overflow-y-auto pr-1">
+<!-- Project Card 3 -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-4 border-l-2 border-l-orange-500 hover:border-orange-500/30 transition-all cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-500/10 text-blue-400">Implementation</span>
+<span class="text-zinc-600 group-hover:text-zinc-400"><span class="material-symbols-outlined text-lg">bolt</span></span>
+</div>
+<h3 class="font-headline font-bold text-sm leading-tight text-white">WMS Cloud Migration - Phase 2</h3>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-[11px] text-zinc-500">
+<span>Progress</span>
+<span>65%</span>
+</div>
+<div class="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-orange-600 to-orange-400 w-[65%]"></div>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex -space-x-2">
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-brand-card" data-alt="professional portrait of a young woman in modern creative environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0933AIV-WhyMw4e9mxaozaRailTQZpz1NuqNjEB9UlePW5ZUdg_szs38hOH5SH13F1-FCkaucAs4DwiRouiCfs_a0fEesWyoKeyWS8uroSGnjjPEwOTKv5QJ1T4EhuRQS2mM2Fd1J3JttIWNNR5n5ImcJdiOSDJ0UFLHBX1F_g707vH0PRrwzhy3aIE7oTb90uE1o3fpsCUUjGA142LKRQc9r2SOoKTgfnQDmu-MleHqjtdZyAHgYgu3A8CBuGvnfxZZq7GeY4Xg"/>
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-brand-card" data-alt="close up headshot of a smiling man with sharp lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAqrMwUMjbstRv4fBkEETR8WsiJEyxIQQNmjuPf2oPkcJ122lQtLZb0BfI0j_vL6npJW1A7sq1tm64_ifZSmEELh4Abgzrf_WYU0YBsMllfCHTJBTKyD6vJfBj_xlIQd-YcMg-z1aTrt4LM4ZQaRd7n0dpVRwZkwbwJEdLubcrnVnyUqHPy93MdD7KH70tKRJcmBFl_mDUCLquuBZqnkZlRGNedH08ao0Qz5pewsiQ6X6kjkaKHMlyQrwNiQX3jfmELsfqRPFywskU"/>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 bg-zinc-900/50 rounded-lg text-[10px] font-medium text-zinc-400">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                Sep 28
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column: Review -->
+<div class="flex-shrink-0 w-80 flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-purple-500"></span>
+<h2 class="font-headline font-bold text-sm tracking-tight text-zinc-200">Review</h2>
+<span class="text-[10px] font-bold bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-white/5">3</span>
+</div>
+<button class="text-zinc-500 hover:text-zinc-300">
+<span class="material-symbols-outlined text-xl">more_horiz</span>
+</button>
+</div>
+<div class="flex flex-col gap-3 overflow-y-auto pr-1">
+<!-- Project Card 4 -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-4 hover:border-orange-500/30 transition-all cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400">QA Check</span>
+<span class="text-zinc-600 group-hover:text-zinc-400"><span class="material-symbols-outlined text-lg">visibility</span></span>
+</div>
+<h3 class="font-headline font-bold text-sm leading-tight text-white">Smart Conveyor Sensor Network</h3>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-[11px] text-zinc-500">
+<span>Progress</span>
+<span>92%</span>
+</div>
+<div class="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+<div class="h-full bg-purple-500 w-[92%]"></div>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex -space-x-2">
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-brand-card" data-alt="professional female portrait in high-end office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnuPffVBola_jsy-Tb2lM93xCt3HJQRR7Z7bsXc91miT3OJboIsIriOmJ4t8BGxCYSygOdN0pPW_t7kwAzDK_r47EPP3cypMa4b7VKFMZ013svrNNOBjwI28apm0Ph1hDYotCX-9fJaW1kQTmL9LIcjqpRsy-Ym1hL0Jobdr8t-WPN645cUhWf5G_xNIKymKtBf5NDs7f3bWxpnM4ceOu2OE-NOD35ME7A0RXN9vNR7a0Aycr8XCpZXMqILt5EiDIsn5XjWFoaI_E"/>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 bg-brand-success/10 rounded-lg text-[10px] font-bold text-brand-success">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                                Near Complete
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column: Complete -->
+<div class="flex-shrink-0 w-80 flex flex-col gap-4">
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-brand-success"></span>
+<h2 class="font-headline font-bold text-sm tracking-tight text-zinc-200">Complete</h2>
+<span class="text-[10px] font-bold bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-white/5">18</span>
+</div>
+<button class="text-zinc-500 hover:text-zinc-300">
+<span class="material-symbols-outlined text-xl">more_horiz</span>
+</button>
+</div>
+<div class="flex flex-col gap-3 overflow-y-auto pr-1">
+<!-- Project Card 5 -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-4 opacity-75 hover:opacity-100 transition-all cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400">Deployed</span>
+<span class="text-zinc-600 group-hover:text-zinc-400"><span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">verified</span></span>
+</div>
+<h3 class="font-headline font-bold text-sm leading-tight text-zinc-300">Cross-Docking Optimization</h3>
+<div class="space-y-2">
+<div class="flex justify-between items-center text-[11px] text-zinc-500">
+<span>Progress</span>
+<span>100%</span>
+</div>
+<div class="w-full h-1 bg-zinc-900 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500 w-full"></div>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex -space-x-2">
+<img alt="Avatar" class="w-6 h-6 rounded-full border-2 border-brand-card" data-alt="professional male profile portrait with sharp lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6Wa78WWHNbHCCryEYdzoTdvBUAgs2M5bcczKO85v_gn3eytbC6qj0y24KdIzArNbAXbspefGBN7sJde11jdUY5L-hugVB5HUe2aG3jp0mIVSaHBVn1IZCF3vWPOisuaGoryyXvGZZnqW6Cf_JjpwZtZ2CX-U_qYhFu1eiCX17fTvvpsKmzqHMLRjdFtZNoRYri4KmWxKR96Aoy8Iz__YpBawAW70Od1-jBhPOzj8fMXHRJtda_uER50pn4Xmtw1oZaJxZBP39FPE"/>
+</div>
+<div class="flex items-center gap-1 px-2 py-1 bg-zinc-900/50 rounded-lg text-[10px] font-medium text-zinc-500">
+<span class="material-symbols-outlined text-[14px]">done_all</span>
+                                Aug 14
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB for quick action (Mobile only/Responsive context) -->
+<button class="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-orange-500 rounded-full shadow-2xl flex items-center justify-center text-white active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</body></html>
