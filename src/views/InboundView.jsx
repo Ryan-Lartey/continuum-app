@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { api } from '../lib/api.js'
 import {
   BarChart, Bar, Cell,
@@ -86,16 +86,28 @@ function RagPill({ score, label }) {
 
 // ── Contextual help tooltip ───────────────────────────────────────────────────
 function HelpTip({ text }) {
-  const [show, setShow] = useState(false)
+  const [show, setShow]     = useState(false)
+  const [coords, setCoords] = useState({ top: 0, left: 0 })
+  const btnRef = useRef(null)
+
+  function onEnter() {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setCoords({ top: r.top - 8, left: r.left + r.width / 2 })
+    }
+    setShow(true)
+  }
+
   return (
-    <span style={{ position:'relative', display:'inline-flex', verticalAlign:'middle', marginLeft:6 }}>
+    <span style={{ display:'inline-flex', verticalAlign:'middle', marginLeft:6, flexShrink:0 }}>
       <button
-        onMouseEnter={()=>setShow(true)} onMouseLeave={()=>setShow(false)}
+        ref={btnRef}
+        onMouseEnter={onEnter} onMouseLeave={()=>setShow(false)}
         onClick={e=>e.stopPropagation()}
-        style={{ width:16, height:16, borderRadius:'50%', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.16)', color:'#64748B', fontSize:9, fontWeight:700, cursor:'help', display:'inline-flex', alignItems:'center', justifyContent:'center', padding:0, flexShrink:0 }}
+        style={{ width:16, height:16, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.22)', color:'#94A3B8', fontSize:9, fontWeight:700, cursor:'help', display:'inline-flex', alignItems:'center', justifyContent:'center', padding:0, flexShrink:0 }}
       >?</button>
       {show && (
-        <div style={{ position:'absolute', left:'50%', bottom:'calc(100% + 8px)', transform:'translateX(-50%)', background:'#1C2035', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'10px 12px', fontSize:11, color:'#CBD5E1', lineHeight:1.55, width:240, zIndex:300, boxShadow:'0 8px 24px rgba(0,0,0,0.6)', pointerEvents:'none', whiteSpace:'normal' }}>
+        <div style={{ position:'fixed', top:coords.top, left:coords.left, transform:'translate(-50%,-100%)', background:'#1C2035', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'10px 12px', fontSize:11, color:'#CBD5E1', lineHeight:1.55, width:240, zIndex:99999, boxShadow:'0 8px 24px rgba(0,0,0,0.6)', pointerEvents:'none', whiteSpace:'normal' }}>
           {text}
           <div style={{ position:'absolute', bottom:-5, left:'50%', transform:'translateX(-50%) rotate(45deg)', width:8, height:8, background:'#1C2035', borderRight:'1px solid rgba(255,255,255,0.12)', borderBottom:'1px solid rgba(255,255,255,0.12)' }}/>
         </div>
@@ -134,7 +146,7 @@ function UphShiftChart({ entries, uphKey, target, label }) {
           <ReferenceLine y={target} stroke="#fbbf24" strokeDasharray="5 4" strokeWidth={1.5}
             label={{ value:`Target: ${target}`, position:'insideTopRight', fill:'#fbbf24', fontSize:10 }}/>
           <Bar dataKey="uph" radius={[4,4,0,0]}
-            label={{ position:'top', fontSize:11, fontWeight:700, fill:'var(--text-2)', formatter: v => v != null ? v.toFixed(1) : '' }}>
+            label={{ position:'top', fontSize:11, fontWeight:700, fill:'#CBD5E1', formatter: v => v != null ? v.toFixed(1) : '' }}>
             {data.map((d,i) => <Cell key={i} fill={d.fill}/>)}
           </Bar>
         </BarChart>
@@ -174,7 +186,7 @@ function BacklogBarChart({ entries }) {
           <ReferenceLine y={0} stroke="#22C55E" strokeDasharray="4 4" strokeWidth={1.5}
             label={{ value:'Target: 0', position:'insideTopLeft', fill:'#22C55E', fontSize:10 }}/>
           <Bar dataKey="backlog" radius={[4,4,0,0]}
-            label={{ position:'top', fontSize:11, fontWeight:700, fill:'var(--text-2)', formatter: v => v != null ? v.toLocaleString() : '' }}>
+            label={{ position:'top', fontSize:11, fontWeight:700, fill:'#CBD5E1', formatter: v => v != null ? v.toLocaleString() : '' }}>
             {data.map((d,i) => <Cell key={i} fill={d.fill}/>)}
           </Bar>
         </BarChart>
