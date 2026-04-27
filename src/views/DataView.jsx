@@ -265,8 +265,10 @@ function SectionCard({ s, selected, onSelect }) {
         <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: `${ragColor}18`, color: ragColor, border: `1px solid ${ragColor}28` }}>{ragLabel}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, marginBottom: 14 }}>
-        {s.id === 'inbound' && isActive ? (
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#64748B', paddingBottom: 8 }}>Weekly score shown below ↓</span>
+        {s.id === 'inbound' ? (
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#64748B', paddingBottom: 8 }}>
+            {isActive ? 'Weekly score shown below ↓' : 'Click to view weekly score'}
+          </span>
         ) : (
           <>
             <span style={{ fontSize: 44, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', color: ragColor }}>
@@ -277,11 +279,11 @@ function SectionCard({ s, selected, onSelect }) {
         )}
       </div>
       <div style={{ height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginBottom: 10 }}>
-        <div style={{ height: '100%', borderRadius: 999, width: `${score ?? 0}%`, background: `linear-gradient(90deg, ${ragColor}80, ${ragColor})`, transition: 'width 700ms cubic-bezier(0.34,1.56,0.64,1)' }} />
+        <div style={{ height: '100%', borderRadius: 999, width: s.id === 'inbound' ? 0 : `${score ?? 0}%`, background: `linear-gradient(90deg, ${ragColor}80, ${ragColor})`, transition: 'width 700ms cubic-bezier(0.34,1.56,0.64,1)' }} />
       </div>
       <div style={{ fontSize: 10, color: '#475569' }}>
         {s.id === 'inbound'
-          ? (isActive ? 'Last shift score — weekly health score shown below' : 'Click to view receive, stow & backlog detail')
+          ? (isActive ? 'Weekly health score shown below' : 'Click to view receive, stow & backlog detail')
           : s.last_shift ? `${s.last_shift.shift_type === 'day' ? '☀' : '🌙'} ${s.last_shift.shift_type} · ${s.last_shift.date}` : 'No shift data yet'
         }
       </div>
