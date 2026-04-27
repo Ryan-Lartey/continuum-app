@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { api, streamAgent } from '../lib/api.js'
 import PresentationHotspot from '../components/PresentationHotspot.jsx'
+import InboundView from './InboundView.jsx'
 import { calcSPC, interpretSignal } from '../lib/spc.js'
 import {
   ComposedChart, Line, Area, Scatter, XAxis, YAxis, CartesianGrid,
@@ -353,7 +354,7 @@ const FALLBACK_SECTIONS = [
   },
 ]
 
-export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
+export default function DataView({ onOpenAgent, onNavigate, demoMode, readOnly }) {
   const [sections, setSections]         = useState(FALLBACK_SECTIONS)
   const [selected, setSelected]         = useState('uph')
   const [latestKpis, setLatestKpis]     = useState({})
@@ -542,8 +543,15 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode }) {
         </div>
       )}
 
-      {/* ── Section detail ── */}
-      {(selectedSection === 'outbound' ? !!selectedSubsection : !!selectedSection) && <>
+      {/* ── Inbound: full operations view ── */}
+      {selectedSection === 'inbound' && (
+        <div style={{ marginTop: 8 }}>
+          <InboundView readOnly={readOnly} demoMode={demoMode} />
+        </div>
+      )}
+
+      {/* ── Section detail (ICQA / Outbound) ── */}
+      {(selectedSection === 'outbound' ? !!selectedSubsection : (!!selectedSection && selectedSection !== 'inbound')) && <>
 
       {/* Section health summary */}
       {activeSection && (() => {

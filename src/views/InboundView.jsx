@@ -135,8 +135,8 @@ function EntryForm({ initial, targets, onSave, onClose, existingEntries }) {
   }
 
   return (
-    <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.75)'}}>
-      <div style={{width:520,maxHeight:'90vh',overflowY:'auto',...card,borderRadius:18,boxShadow:'0 32px 80px rgba(0,0,0,0.7)'}}>
+    <div style={{position:'fixed',inset:0,zIndex:9999,display:'flex',alignItems:'flex-start',justifyContent:'center',background:'rgba(0,0,0,0.75)',overflowY:'auto',padding:'32px 16px',boxSizing:'border-box'}}>
+      <div style={{...card,width:520,borderRadius:18,boxShadow:'0 32px 80px rgba(0,0,0,0.7)',flexShrink:0,overflow:'visible'}}>
         <div style={{height:2,background:'linear-gradient(90deg,#f97316,rgba(249,115,22,0.1))'}}/>
         <div style={{padding:'18px 24px',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <div style={{fontSize:15,fontWeight:700,color:'var(--text-1)'}}>{initial?.id?'Edit Shift Entry':'Log Shift Data'}</div>
