@@ -523,7 +523,7 @@ export default function DataView({ onOpenAgent, onNavigate, demoMode, readOnly }
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-3)' }}>{activeLabelFull}</p>
         </div>
-        {selectedSection && (
+        {selectedSection && selectedSection !== 'inbound' && (
           <button onClick={() => setShowGlossary(g => !g)}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
             style={{ background: showGlossary ? 'rgba(232,130,12,0.18)' : 'rgba(255,255,255,0.06)', color: showGlossary ? '#E8820C' : 'var(--text-2)', border: `1px solid ${showGlossary ? 'rgba(232,130,12,0.35)' : 'var(--border)'}` }}>
