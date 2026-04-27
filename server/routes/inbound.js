@@ -7,6 +7,10 @@ const router = express.Router()
 const DEMO_ENTRIES = [
   // W18 2026 (Apr 27 – current week)
   { id:2001, entry_date:'2026-04-27', shift:'day',   week_number:18, year:2026, parcel_units:1200, parcel_hours:11,   vendor_units:810,  vendor_hours:3,   transfer_units:295, transfer_hours:2.5, stow_units:1800, stow_hours:11.5, backlog_rcv_total:220, notes:'' },
+  { id:2020, entry_date:'2026-04-27', shift:'night', week_number:18, year:2026, parcel_units:840,  parcel_hours:8,    vendor_units:395,  vendor_hours:1.5, transfer_units:205, transfer_hours:2,   stow_units:1190, stow_hours:8.5,  backlog_rcv_total:180, notes:'' },
+  { id:2021, entry_date:'2026-04-28', shift:'day',   week_number:18, year:2026, parcel_units:1230, parcel_hours:11,   vendor_units:825,  vendor_hours:3,   transfer_units:305, transfer_hours:2.5, stow_units:1840, stow_hours:12,   backlog_rcv_total:150, notes:'' },
+  { id:2022, entry_date:'2026-04-28', shift:'night', week_number:18, year:2026, parcel_units:800,  parcel_hours:7.5,  vendor_units:405,  vendor_hours:1.5, transfer_units:195, transfer_hours:2,   stow_units:1160, stow_hours:8,    backlog_rcv_total:120, notes:'' },
+  { id:2023, entry_date:'2026-04-29', shift:'day',   week_number:18, year:2026, parcel_units:1170, parcel_hours:10.5, vendor_units:795,  vendor_hours:3,   transfer_units:285, transfer_hours:2.5, stow_units:1790, stow_hours:11.5, backlog_rcv_total:95,  notes:'Backlog clearing nicely' },
   // W17 2026 (Apr 20–26)
   { id:2002, entry_date:'2026-04-21', shift:'day',   week_number:17, year:2026, parcel_units:1150, parcel_hours:10.5, vendor_units:780,  vendor_hours:3,   transfer_units:280, transfer_hours:2.5, stow_units:1750, stow_hours:11,   backlog_rcv_total:380, notes:'' },
   { id:2003, entry_date:'2026-04-21', shift:'night', week_number:17, year:2026, parcel_units:820,  parcel_hours:8,    vendor_units:380,  vendor_hours:1.5, transfer_units:180, transfer_hours:1.5, stow_units:1100, stow_hours:8,    backlog_rcv_total:290, notes:'' },

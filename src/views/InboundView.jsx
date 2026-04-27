@@ -91,6 +91,7 @@ function HelpTip({ text }) {
     <span style={{ position:'relative', display:'inline-flex', verticalAlign:'middle', marginLeft:6 }}>
       <button
         onMouseEnter={()=>setShow(true)} onMouseLeave={()=>setShow(false)}
+        onClick={e=>e.stopPropagation()}
         style={{ width:16, height:16, borderRadius:'50%', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.16)', color:'#64748B', fontSize:9, fontWeight:700, cursor:'help', display:'inline-flex', alignItems:'center', justifyContent:'center', padding:0, flexShrink:0 }}
       >?</button>
       {show && (
@@ -461,7 +462,7 @@ function ReceiveSection({ entries, targets }) {
             <div key={l} style={{textAlign:'right'}}><div style={{fontSize:9,color:'var(--text-3)',textTransform:'uppercase',marginBottom:1}}>{l}</div>
               <div style={{fontSize:13,fontWeight:700,color:l==='RCV UPH'?dr.c:'var(--text-1)'}}>{v}</div></div>
           ))}
-          <span style={{fontSize:14,color:'var(--text-3)',transform:open?'rotate(180deg)':'none',transition:'transform 0.2s'}}>{String.fromCharCode(8964)}</span>
+          <span style={{fontSize:12,color:'var(--text-3)',transform:open?'rotate(180deg)':'none',transition:'transform 0.2s',display:'inline-block'}}>▾</span>
         </div>
       </div>
 
