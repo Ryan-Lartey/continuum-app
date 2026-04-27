@@ -142,7 +142,7 @@ function UphShiftChart({ entries, uphKey, target, label }) {
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
           <XAxis dataKey="name" tick={TICK} axisLine={false} tickLine={false}/>
           <YAxis tick={TICK} axisLine={false} tickLine={false} width={36} domain={[0, maxY]}/>
-          <Tooltip contentStyle={TT_S} formatter={v=>[`${v} UPH`, label]}/>
+          <Tooltip contentStyle={TT_S} labelStyle={{ color:'#E4E6F0' }} itemStyle={{ color:'#E4E6F0' }} formatter={v=>[`${v} UPH`, label]}/>
           <ReferenceLine y={target} stroke="#fbbf24" strokeDasharray="5 4" strokeWidth={1.5}
             label={{ value:`Target: ${target}`, position:'insideTopRight', fill:'#fbbf24', fontSize:10 }}/>
           <Bar dataKey="uph" radius={[4,4,0,0]}
@@ -182,7 +182,7 @@ function BacklogBarChart({ entries }) {
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
           <XAxis dataKey="name" tick={TICK} axisLine={false} tickLine={false}/>
           <YAxis tick={TICK} axisLine={false} tickLine={false} width={48}/>
-          <Tooltip contentStyle={TT_S} formatter={v=>[`${v.toLocaleString()} units`,'Backlog']}/>
+          <Tooltip contentStyle={TT_S} labelStyle={{ color:'#E4E6F0' }} itemStyle={{ color:'#E4E6F0' }} formatter={v=>[`${v.toLocaleString()} units`,'Backlog']}/>
           <ReferenceLine y={0} stroke="#22C55E" strokeDasharray="4 4" strokeWidth={1.5}
             label={{ value:'Target: 0', position:'insideTopLeft', fill:'#22C55E', fontSize:10 }}/>
           <Bar dataKey="backlog" radius={[4,4,0,0]}
