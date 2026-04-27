@@ -21,6 +21,7 @@ import mapsRouter from './routes/maps.js'
 import demoRoutes from './routes/demo.js'
 import processMapsRouter from './routes/process-maps.js'
 import sectionsRouter from './routes/sections.js'
+import inboundRouter from './routes/inbound.js'
 import { startAutomation } from './automation.js'
 import { runSync } from './services/sync.js'
 import authRoutes from './routes/auth.js'
@@ -64,6 +65,7 @@ app.use('/api/maps', mapsRouter)
 app.use('/api/demo', demoRoutes)
 app.use('/api/process-maps', processMapsRouter)
 app.use('/api/sections', sectionsRouter)
+app.use('/api/inbound', inboundRouter)
 
 // Block write operations for viewer role on mutating routes
 app.use('/api/kpi', (req, res, next) => {
@@ -83,6 +85,10 @@ app.use('/api/portfolios', (req, res, next) => {
   next()
 })
 app.use('/api/brief', (req, res, next) => {
+  if (req.method !== 'GET' && req.user?.role !== 'admin') return res.status(403).json({ error: 'Read-only access' })
+  next()
+})
+app.use('/api/inbound', (req, res, next) => {
   if (req.method !== 'GET' && req.user?.role !== 'admin') return res.status(403).json({ error: 'Read-only access' })
   next()
 })

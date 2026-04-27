@@ -10,6 +10,7 @@ import DataView from './views/DataView.jsx'
 import ReportsView from './views/ReportsView.jsx'
 import ProcessMapsView from './views/ProcessMapsView.jsx'
 import LoginView from './views/LoginView.jsx'
+import InboundView from './views/InboundView.jsx'
 import { api, setApiDemoMode } from './lib/api.js'
 import { isLoggedIn, getRole, getName, clearAuth } from './lib/auth.js'
 import GlobalSearch from './components/GlobalSearch.jsx'
@@ -168,6 +169,7 @@ export default function App() {
             />
           )}
           {view === 'data'          && <DataView        {...viewProps} readOnly={role === 'viewer'} />}
+          {view === 'inbound'       && <InboundView     {...viewProps} readOnly={role === 'viewer'} />}
           {view === 'reports'       && <ReportsView     {...viewProps} readOnly={role === 'viewer'} />}
           {view === 'process-maps'  && <ProcessMapsView {...viewProps} readOnly={role === 'viewer'} />}
         </div>

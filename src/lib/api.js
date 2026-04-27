@@ -107,6 +107,15 @@ export const api = {
   updateSectionMetric: (id, data) => req('PUT', `/sections/metrics/${id}`, data),
   createShift: (data) => req('POST', '/sections/shifts', data),
   submitShiftScores: (shiftId, entries) => req('POST', `/sections/shifts/${shiftId}/scores`, { entries }),
+
+  // Inbound Operations
+  getInboundEntries: (params = {}) => req('GET', `/inbound/entries?${new URLSearchParams(params)}`),
+  addInboundEntry: (data) => req('POST', '/inbound/entries', data),
+  updateInboundEntry: (id, data) => req('PUT', `/inbound/entries/${id}`, data),
+  deleteInboundEntry: (id) => req('DELETE', `/inbound/entries/${id}`),
+  getInboundTargets: () => req('GET', '/inbound/targets'),
+  updateInboundTarget: (data) => req('POST', '/inbound/targets', data),
+  getInboundWeeks: () => req('GET', '/inbound/weeks'),
 }
 
 export function streamSwarm(workflowId, onEvent, onDone, onError) {

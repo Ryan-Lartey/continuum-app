@@ -5,12 +5,13 @@ import PresentationHotspot from './PresentationHotspot.jsx'
 import {
   LayoutDashboard, Activity, Target, Kanban,
   TrendingUp, FileBarChart, GitFork,
-  Settings, BookOpen, LogOut,
+  Settings, BookOpen, LogOut, Warehouse,
 } from 'lucide-react'
 
 const NAV_ALL = [
   { id: 'home',          Icon: LayoutDashboard, label: 'Dashboard',    adminOnly: true },
   { id: 'data',          Icon: TrendingUp,      label: 'Data'          },
+  { id: 'inbound',       Icon: Warehouse,       label: 'Inbound'       },
   { id: 'floor',         Icon: Activity,        label: 'Floor Walk'    },
   { id: 'projects',      Icon: Target,          label: 'Projects'      },
   { id: 'portfolio',     Icon: Kanban,          label: 'Portfolio'     },
