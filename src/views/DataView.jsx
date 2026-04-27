@@ -274,7 +274,10 @@ function SectionCard({ s, selected, onSelect }) {
         <div style={{ height: '100%', borderRadius: 999, width: `${score ?? 0}%`, background: `linear-gradient(90deg, ${ragColor}80, ${ragColor})`, transition: 'width 700ms cubic-bezier(0.34,1.56,0.64,1)' }} />
       </div>
       <div style={{ fontSize: 10, color: '#475569' }}>
-        {s.last_shift ? `${s.last_shift.shift_type === 'day' ? '☀' : '🌙'} ${s.last_shift.shift_type} · ${s.last_shift.date}` : 'No shift data yet'}
+        {s.id === 'inbound'
+          ? (isActive ? 'Last shift score — weekly health score shown below' : 'Click to view receive, stow & backlog detail')
+          : s.last_shift ? `${s.last_shift.shift_type === 'day' ? '☀' : '🌙'} ${s.last_shift.shift_type} · ${s.last_shift.date}` : 'No shift data yet'
+        }
       </div>
     </button>
   )

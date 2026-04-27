@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { api } from '../lib/api.js'
 import {
-  ComposedChart, BarChart, AreaChart, Bar, Line, Area,
+  BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine,
-  ResponsiveContainer, Legend,
+  ResponsiveContainer,
 } from 'recharts'
 
 // ── ISO week helpers ──────────────────────────────────────────────────────────
@@ -82,6 +82,109 @@ const TICK  = { fontSize:10, fill:'#4E5268' }
 function RagPill({ score, label }) {
   const c = ragC(score), l = label ?? ragL(score)
   return <span style={{ fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:999, background:`${c}18`, color:c, border:`1px solid ${c}28` }}>{l}</span>
+}
+
+// ── Contextual help tooltip ───────────────────────────────────────────────────
+function HelpTip({ text }) {
+  const [show, setShow] = useState(false)
+  return (
+    <span style={{ position:'relative', display:'inline-flex', verticalAlign:'middle', marginLeft:6 }}>
+      <button
+        onMouseEnter={()=>setShow(true)} onMouseLeave={()=>setShow(false)}
+        style={{ width:16, height:16, borderRadius:'50%', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.16)', color:'#64748B', fontSize:9, fontWeight:700, cursor:'help', display:'inline-flex', alignItems:'center', justifyContent:'center', padding:0, flexShrink:0 }}
+      >?</button>
+      {show && (
+        <div style={{ position:'absolute', left:'50%', bottom:'calc(100% + 8px)', transform:'translateX(-50%)', background:'#1C2035', border:'1px solid rgba(255,255,255,0.12)', borderRadius:10, padding:'10px 12px', fontSize:11, color:'#CBD5E1', lineHeight:1.55, width:240, zIndex:300, boxShadow:'0 8px 24px rgba(0,0,0,0.6)', pointerEvents:'none', whiteSpace:'normal' }}>
+          {text}
+          <div style={{ position:'absolute', bottom:-5, left:'50%', transform:'translateX(-50%) rotate(45deg)', width:8, height:8, background:'#1C2035', borderRight:'1px solid rgba(255,255,255,0.12)', borderBottom:'1px solid rgba(255,255,255,0.12)' }}/>
+        </div>
+      )}
+    </span>
+  )
+}
+
+// ── Simple UPH per-shift bar chart ────────────────────────────────────────────
+function UphShiftChart({ entries, uphKey, target, label }) {
+  const data = entries
+    .filter(e => e[uphKey] != null)
+    .map(e => ({
+      name: new Date(e.entry_date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric'}) + (e.shift==='day'?' ☀':' 🌙'),
+      uph:  Math.round(e[uphKey] * 10) / 10,
+      fill: e[uphKey] >= target ? '#22C55E' : e[uphKey] >= target * 0.85 ? '#F59E0B' : '#EF4444',
+    }))
+
+  if (!data.length) return (
+    <div style={{ padding:'20px 0', textAlign:'center', fontSize:12, color:'var(--text-3)', fontStyle:'italic' }}>No data to chart yet</div>
+  )
+
+  const maxY = Math.ceil(Math.max(...data.map(d=>d.uph), target) * 1.25)
+
+  return (
+    <div>
+      <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.06em', color:'var(--text-3)', marginBottom:8 }}>
+        {label} per shift — dashed line = target ({target})
+      </div>
+      <ResponsiveContainer width="100%" height={190}>
+        <BarChart data={data} margin={{ top:24, right:16, bottom:0, left:0 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
+          <XAxis dataKey="name" tick={TICK} axisLine={false} tickLine={false}/>
+          <YAxis tick={TICK} axisLine={false} tickLine={false} width={36} domain={[0, maxY]}/>
+          <Tooltip contentStyle={TT_S} formatter={v=>[`${v} UPH`, label]}/>
+          <ReferenceLine y={target} stroke="#fbbf24" strokeDasharray="5 4" strokeWidth={1.5}
+            label={{ value:`Target: ${target}`, position:'insideTopRight', fill:'#fbbf24', fontSize:10 }}/>
+          <Bar dataKey="uph" radius={[4,4,0,0]}
+            label={{ position:'top', fontSize:11, fontWeight:700, fill:'var(--text-2)', formatter: v => v != null ? v.toFixed(1) : '' }}>
+            {data.map((d,i) => <Cell key={i} fill={d.fill}/>)}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:8, fontSize:10, color:'var(--text-3)' }}>
+        <span><span style={{ display:'inline-block', width:10, height:10, borderRadius:2, background:'#22C55E', marginRight:4, verticalAlign:'middle' }}/>On target</span>
+        <span><span style={{ display:'inline-block', width:10, height:10, borderRadius:2, background:'#F59E0B', marginRight:4, verticalAlign:'middle' }}/>Close to target</span>
+        <span><span style={{ display:'inline-block', width:10, height:10, borderRadius:2, background:'#EF4444', marginRight:4, verticalAlign:'middle' }}/>Below target</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Backlog bar chart ─────────────────────────────────────────────────────────
+function BacklogBarChart({ entries }) {
+  const data = [...entries]
+    .sort((a,b) => a.entry_date.localeCompare(b.entry_date)||(a.shift==='day'?-1:1))
+    .map(e => ({
+      name: new Date(e.entry_date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric'}) + (e.shift==='day'?' ☀':' 🌙'),
+      backlog: e.backlog_rcv_total || 0,
+      fill: (e.backlog_rcv_total||0) === 0 ? '#22C55E' : (e.backlog_rcv_total||0) < 300 ? '#F59E0B' : '#EF4444',
+    }))
+
+  if (!data.length) return null
+
+  return (
+    <div>
+      <div style={{ fontSize:10, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.06em', color:'var(--text-3)', marginBottom:8 }}>
+        Units left in backlog at end of each shift — lower is better, target = 0
+      </div>
+      <ResponsiveContainer width="100%" height={170}>
+        <BarChart data={data} margin={{ top:24, right:16, bottom:0, left:0 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)"/>
+          <XAxis dataKey="name" tick={TICK} axisLine={false} tickLine={false}/>
+          <YAxis tick={TICK} axisLine={false} tickLine={false} width={48}/>
+          <Tooltip contentStyle={TT_S} formatter={v=>[`${v.toLocaleString()} units`,'Backlog']}/>
+          <ReferenceLine y={0} stroke="#22C55E" strokeDasharray="4 4" strokeWidth={1.5}
+            label={{ value:'Target: 0', position:'insideTopLeft', fill:'#22C55E', fontSize:10 }}/>
+          <Bar dataKey="backlog" radius={[4,4,0,0]}
+            label={{ position:'top', fontSize:11, fontWeight:700, fill:'var(--text-2)', formatter: v => v != null ? v.toLocaleString() : '' }}>
+            {data.map((d,i) => <Cell key={i} fill={d.fill}/>)}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+      <div style={{ display:'flex', gap:16, justifyContent:'center', marginTop:8, fontSize:10, color:'var(--text-3)' }}>
+        <span><span style={{ display:'inline-block', width:10, height:10, borderRadius:2, background:'#22C55E', marginRight:4, verticalAlign:'middle' }}/>Zero backlog</span>
+        <span><span style={{ display:'inline-block', width:10, height:10, borderRadius:2, background:'#F59E0B', marginRight:4, verticalAlign:'middle' }}/>&lt;300 units</span>
+        <span><span style={{ display:'inline-block', width:10, height:10, borderRadius:2, background:'#EF4444', marginRight:4, verticalAlign:'middle' }}/>300+ units</span>
+      </div>
+    </div>
+  )
 }
 
 // ── Entry Form ────────────────────────────────────────────────────────────────
@@ -229,8 +332,11 @@ function HealthCard({ health, weekNum, shiftCount }) {
         </div>
         {/* Title + breakdown */}
         <div style={{flex:1}}>
-          <div style={{fontSize:18,fontWeight:700,color:'var(--text-1)',marginBottom:2}}>Inbound Health Score</div>
-          <div style={{fontSize:12,color:'var(--text-3)',marginBottom:16}}>W{weekNum} · {shiftCount} shift{shiftCount!==1?'s':''} logged</div>
+          <div style={{display:'flex',alignItems:'center'}}>
+            <span style={{fontSize:18,fontWeight:700,color:'var(--text-1)'}}>Weekly Health Score</span>
+            <HelpTip text="Weighted score based on this week's inbound data. RCV UPH 30% + Stow UPH 35% + Backlog 25% + Parcel UPH 5% + Vendor UPH 3% + Transfer UPH 2%. Each metric scores 0–100 against its target. Green ≥85, Amber ≥70, Red below 70."/>
+          </div>
+          <div style={{fontSize:12,color:'var(--text-3)',marginBottom:16}}>W{weekNum} · {shiftCount} shift{shiftCount!==1?'s':''} logged this week</div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
             {Object.values(components).map(({label,score:s,weight})=>{
               const cc = ragC(s)
@@ -304,7 +410,13 @@ function ReceiveSection({ entries, targets }) {
     rcv_uph: e.rcv_uph!=null?parseFloat(e.rcv_uph.toFixed(1)):null,
   }))
 
-  const ReceiveSub = ({ label, unitKey, hourKey, uphKey, tgt }) => {
+  const HELP = {
+    parcel:   'Parcels received from courier vehicles. Target: 100 UPH. Low UPH often means slow scanning or staffing gaps at the dock.',
+    vendor:   'Vendor/supplier deliveries — typically pallet or bulk freight. Target: 250 UPH. Usually faster to process than parcels.',
+    transfer: 'Stock transferred in from other sites or fulfilment centres. Target: 100 UPH.',
+  }
+
+  const ReceiveSub = ({ label, unitKey, hourKey, uphKey, tgt, helpKey }) => {
     const su=entries.reduce((a,e)=>a+(e[unitKey]||0),0)
     const sh=entries.reduce((a,e)=>a+(e[hourKey]||0),0)
     const uph=sh>0?su/sh:null
@@ -312,7 +424,10 @@ function ReceiveSection({ entries, targets }) {
     return (
       <div style={{marginBottom:16,paddingBottom:16,borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
-          <div style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.07em',color:'var(--text-3)'}}>{label}</div>
+          <div style={{display:'flex',alignItems:'center'}}>
+            <span style={{fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.07em',color:'var(--text-3)'}}>{label}</span>
+            {helpKey && <HelpTip text={HELP[helpKey]}/>}
+          </div>
           <RagPill score={uph!=null?(uph/tgt)*100:null} label={uph!=null?r.l:'No data'}/>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:10}}>
@@ -335,7 +450,10 @@ function ReceiveSection({ entries, targets }) {
       {/* Header */}
       <div style={{padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}} onClick={()=>setOpen(o=>!o)}>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <div style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',color:'var(--text-1)'}}>Receive</div>
+          <div style={{display:'flex',alignItems:'center'}}>
+            <span style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',color:'var(--text-1)'}}>Receive</span>
+            <HelpTip text="How many items are received and processed per hour (UPH). RCV UPH combines Parcel, Vendor and Transfer receive. Target: 150 UPH. Click to expand per-type breakdown."/>
+          </div>
           <RagPill score={rcvUph!=null?(rcvUph/t.rcv_uph)*100:null} label={rcvUph!=null?dr.l:'No data'}/>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:16}}>
@@ -350,9 +468,9 @@ function ReceiveSection({ entries, targets }) {
       {open && (
         <div style={{padding:'0 20px 20px'}}>
           {/* Sub-sections */}
-          <ReceiveSub label="Parcel Receive"   unitKey="parcel_units"   hourKey="parcel_hours"   uphKey="parcel_uph"   tgt={t.parcel_uph}/>
-          <ReceiveSub label="Vendor Receive"   unitKey="vendor_units"   hourKey="vendor_hours"   uphKey="vendor_uph"   tgt={t.vendor_uph}/>
-          <ReceiveSub label="Transfer Receive" unitKey="transfer_units" hourKey="transfer_hours" uphKey="transfer_uph" tgt={t.transfer_uph}/>
+          <ReceiveSub label="Parcel Receive"   unitKey="parcel_units"   hourKey="parcel_hours"   uphKey="parcel_uph"   tgt={t.parcel_uph}   helpKey="parcel"/>
+          <ReceiveSub label="Vendor Receive"   unitKey="vendor_units"   hourKey="vendor_hours"   uphKey="vendor_uph"   tgt={t.vendor_uph}   helpKey="vendor"/>
+          <ReceiveSub label="Transfer Receive" unitKey="transfer_units" hourKey="transfer_hours" uphKey="transfer_uph" tgt={t.transfer_uph} helpKey="transfer"/>
 
           {/* Receive Totals summary */}
           <div style={{background:'rgba(255,255,255,0.025)',borderRadius:10,padding:'10px 14px',marginBottom:16}}>
@@ -365,27 +483,8 @@ function ReceiveSection({ entries, targets }) {
             </div>
           </div>
 
-          {/* Chart */}
-          {chartData.length>0&&(
-            <div>
-              <div style={{fontSize:10,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',color:'var(--text-3)',marginBottom:8}}>Daily Receive Volume and RCV UPH</div>
-              <ResponsiveContainer width="100%" height={180}>
-                <ComposedChart data={chartData} margin={{top:4,right:40,bottom:0,left:0}}>
-                  <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3"/>
-                  <XAxis dataKey="name" tick={TICK}/>
-                  <YAxis yAxisId="units" tick={TICK} width={50}/>
-                  <YAxis yAxisId="uph" orientation="right" tick={TICK} width={40}/>
-                  <Tooltip contentStyle={TT_S}/>
-                  <Legend wrapperStyle={{fontSize:10,color:'var(--text-3)'}}/>
-                  <Bar yAxisId="units" dataKey="parcel"   name="Parcel"   stackId="rcv" fill="#f97316" fillOpacity={0.8}/>
-                  <Bar yAxisId="units" dataKey="vendor"   name="Vendor"   stackId="rcv" fill="#3B7FDE" fillOpacity={0.8}/>
-                  <Bar yAxisId="units" dataKey="transfer" name="Transfer" stackId="rcv" fill="#0891B2" fillOpacity={0.8}/>
-                  <Line yAxisId="uph" type="monotone" dataKey="rcv_uph" name="RCV UPH" stroke="#fbbf24" strokeWidth={2} dot={{r:3}} connectNulls/>
-                  <ReferenceLine yAxisId="uph" y={t.rcv_uph} stroke="#fbbf24" strokeDasharray="4 4" strokeOpacity={0.6}/>
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          )}
+          {/* RCV UPH chart — one bar per shift, coloured by performance vs target */}
+          <UphShiftChart entries={entries} uphKey="rcv_uph" target={t.rcv_uph} label="RCV UPH"/>
         </div>
       )}
     </div>
@@ -410,7 +509,10 @@ function StowSection({ entries, targets }) {
   return (
     <div style={{...card,marginBottom:14,padding:20}}>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-        <div style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',color:'var(--text-1)'}}>Stow</div>
+        <div style={{display:'flex',alignItems:'center'}}>
+          <span style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',color:'var(--text-1)'}}>Stow</span>
+          <HelpTip text="Stow UPH = how many received items are put away into pick locations per hour. Target: 150 UPH. If Stow UPH falls behind RCV UPH, backlog builds up — items pile up waiting to be stowed."/>
+        </div>
         <RagPill score={uph!=null?(uph/t.stow_uph)*100:null} label={uph!=null?r.l:'No data'}/>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 2fr',gap:20}}>
@@ -430,26 +532,8 @@ function StowSection({ entries, targets }) {
             {key:'stow_uph',label:'UPH',dec:1,rag:t.stow_uph,bold:true},
           ]}/>
         </div>
-        {/* Chart */}
-        {chartData.length>0&&(
-          <div>
-            <div style={{fontSize:10,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',color:'var(--text-3)',marginBottom:8}}>Stow UPH vs RCV UPH — daily trend</div>
-            <ResponsiveContainer width="100%" height={220}>
-              <ComposedChart data={chartData} margin={{top:4,right:40,bottom:0,left:0}}>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3"/>
-                <XAxis dataKey="name" tick={TICK}/>
-                <YAxis yAxisId="units" tick={TICK} width={50}/>
-                <YAxis yAxisId="uph" orientation="right" tick={TICK} width={40}/>
-                <Tooltip contentStyle={TT_S}/>
-                <Legend wrapperStyle={{fontSize:10,color:'var(--text-3)'}}/>
-                <Bar yAxisId="units" dataKey="stow_units" name="Stow Units" fill="#7C3AED" fillOpacity={0.7}/>
-                <Line yAxisId="uph" type="monotone" dataKey="stow_uph" name="Stow UPH" stroke="#f97316" strokeWidth={2} dot={{r:3}} connectNulls/>
-                <Line yAxisId="uph" type="monotone" dataKey="rcv_uph" name="RCV UPH (ref)" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" dot={false} connectNulls/>
-                <ReferenceLine yAxisId="uph" y={t.stow_uph} stroke="#f97316" strokeDasharray="4 4" strokeOpacity={0.5}/>
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        {/* Stow UPH per shift chart */}
+        <UphShiftChart entries={entries} uphKey="stow_uph" target={t.stow_uph} label="Stow UPH"/>
       </div>
     </div>
   )
@@ -473,8 +557,11 @@ function BacklogSection({ entries }) {
     <div style={{...card,marginBottom:14,padding:20,borderColor:'rgba(245,158,11,0.2)'}}>
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:16}}>
         <div>
-          <div style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',color:'#F59E0B',marginBottom:4}}>Backlog Receive Total</div>
-          {latest&&<div style={{fontSize:10,color:'var(--text-3)'}}>Latest: {fmtD(latest.entry_date)} ({latest.shift==='day'?'Day':'Night'} shift)</div>}
+          <div style={{display:'flex',alignItems:'center'}}>
+            <span style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',color:'#F59E0B'}}>Backlog Receive Total</span>
+            <HelpTip text="Backlog = units received but not yet stowed at shift handover. Target is always 0. A growing backlog means receive is outpacing stow — items are piling up faster than they're being put away. The outgoing shift must hand this number over accurately."/>
+          </div>
+          {latest&&<div style={{fontSize:10,color:'var(--text-3)',marginTop:3}}>Latest reading: {fmtD(latest.entry_date)} ({latest.shift==='day'?'Day':'Night'} shift)</div>}
         </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <span style={{fontSize:11,fontWeight:700,color:tColor}}>{tLabel}</span>
@@ -489,22 +576,7 @@ function BacklogSection({ entries }) {
             <ShiftTable entries={sorted} cols={[{key:'backlog_rcv_total',label:'Backlog',bold:true}]}/>
           </div>
         </div>
-        {chartData.length>0&&(
-          <div>
-            <div style={{fontSize:10,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',color:'var(--text-3)',marginBottom:8}}>Backlog trend this week</div>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={chartData} margin={{top:4,right:10,bottom:0,left:0}}>
-                <defs><linearGradient id="backlogGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#F59E0B" stopOpacity={0.25}/><stop offset="95%" stopColor="#F59E0B" stopOpacity={0}/></linearGradient></defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3"/>
-                <XAxis dataKey="name" tick={TICK}/>
-                <YAxis tick={TICK} width={50}/>
-                <Tooltip contentStyle={TT_S}/>
-                <ReferenceLine y={0} stroke="#22C55E" strokeDasharray="4 4" strokeOpacity={0.5} label={{value:'Target: 0',position:'insideTopLeft',fill:'#22C55E',fontSize:9}}/>
-                <Area type="monotone" dataKey="backlog" name="Backlog" stroke="#F59E0B" strokeWidth={2} fill="url(#backlogGrad)" dot={{r:3,fill:'#F59E0B'}}/>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <BacklogBarChart entries={sorted}/>
       </div>
     </div>
   )
